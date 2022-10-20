@@ -1,0 +1,15 @@
+#!/bin/bash --login
+#$ -cwd
+#$ -N Grid_solve_$TASK_ID
+#$ -j y
+#$ -o job_solve_$TASK_ID.out
+#$ -l h_rt=500000
+#$ -l mem_free=120G
+#$ -t 1
+#$ -m e
+#$ -M paul.e.seifert@campus.tu-berlin.de
+var1="05_09_tyndp"
+sensitivit_scen=0
+module add gurobi/9.5.0
+conda activate /net/homes/ivw/seifert/conda_env3
+python /work/seifert/powerinvest/reading_model_and_solve.py $var1 ${SGE_TASK_ID} $sensitivit_scen

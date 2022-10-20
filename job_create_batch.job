@@ -1,0 +1,17 @@
+#!/bin/bash --login
+#$ -cwd
+#$ -N Grid_create_batch_$TASK_ID
+#$ -j y
+#$ -o job_create_batch_$TASK_ID.out
+#$ -l h_rt=70000
+#$ -l mem_free=50G
+#$ -t 1
+#$ -m e
+#$ -M paul.e.seifert@campus.tu-berlin.de
+case_name="05_09_tyndp"
+years=3
+timesteps=504
+sensitivit_scen=0
+module add gurobi/9.5.0
+conda activate /net/homes/ivw/seifert/conda_env3
+python /work/seifert/powerinvest/model.py $case_name $years $timesteps ${SGE_TASK_ID} $sensitivit_scen
