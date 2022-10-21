@@ -1,0 +1,29 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+gurobipy = "*"
+cython = "*"
+selenium = "*"
+networkx = "*"
+plotly = "*"
+pandas = "*"
+plotly-express = "*"
+kaleido = "*"
+ipython = "*"
+ipykernel = "*"
+colour = "*"
+jinja2 = "*"
+matplotlib = "*"
+seaborn = "*"
+requests = "*"
+starlette = "*"
+numba = "*"
+openpyxl = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.10"
