@@ -1,14 +1,14 @@
-from dataclasses import dataclass,astuple
-from printing_funct import plotly_maps_bubbles, plotly_maps_lines_colorless
+from dataclasses import dataclass, astuple
 
-import pandas as pd
 import numpy as np
-import sys
+import pandas as pd
+
+from printing_funct import plotly_maps_bubbles
+
 pd.options.mode.chained_assignment = None
 from helper_functions import demand_columns, give_nearest_bus_relative_position, Myobject
 from mapping import new_res_mapping
 import pickle
-from helper_functions import create_encyclopedia
 import requests
 import json
 from functools import reduce
@@ -30,8 +30,8 @@ class run_parameter:
         elif (platform == "darwin") or (platform == "windows"):
             self.directory = ""
             self.case_name = scenario_name
-            self.years = 3
-            self.timesteps = 10
+            self.years = 1
+            self.timesteps = 48
             self.scen = 1
             self.sensitivit_scen = 0
         self.solving = False
@@ -46,29 +46,6 @@ class run_parameter:
             case 1:
                 self.electrolyser = []
                 print("BASE case")
-            case 2:
-                self.electrolyser = pd.DataFrame({
-                    "name": ["electrolyser Bornholm", "electrolyser_NS1", "electrolyser_NS2"],
-                    "bus": [521, 522, 523],
-                    "cost": [645000, 645000, 645000]})
-                print("EI case")
-            case 3:
-                self.electrolyser = pd.DataFrame({
-                    "name": ["electrolyser Bornholm", "electrolyser_NS1", "electrolyser_NS2", "e1", "e2", "e3", "e4", "e5",
-                             "e6", "e7", "e8", "e9", "e10", "e11", "e12", "e13", "e14"],
-                    "bus": [521, 522, 523, 403, 212, 209, 170, 376, 357, 279, 103, 24, 357, 62, 467, 218, 513],
-                    "cost": [645000, 645000, 645000, 450000, 450000, 450000, 450000, 450000, 450000, 450000, 450000, 450000,
-                             450000, 450000, 450000, 450000, 450000]
-                })
-                print("COMBI case")
-            case 4:
-                self.electrolyser = pd.DataFrame({
-                    "name": ["electrolyser Bornholm", "electrolyser_NS1", "electrolyser_NS2", "e1", "e2", "e3", "e4", "e5",
-                             "e6", "e7", "e8", "e9", "e10", "e11", "e12", "e13", "e14"],
-                    "bus": [521, 522, 523, 403, 212, 209, 170, 376, 357, 279, 103, 24, 357, 62, 467, 218, 513],
-                    "cost": [645000, 645000, 645000, 450000, 450000, 450000, 450000, 450000, 450000, 450000, 450000, 450000,
-                             450000, 450000, 450000, 450000, 450000]})
-                print("Stakeholder case")
 
         match self.sensitivit_scen:
             case 0:
@@ -96,30 +73,6 @@ class run_parameter:
                 self.CO2_price = [80, 120, 160]
                 self.R_H = [108, 108, 108]
                 self.grid_extension = True
-        self.add_future_windcluster = True
-        self.EI_bus = pd.DataFrame([
-            {"country": "BHEH", "y": 55.13615337829421, "x": 14.898639089359104},
-            {"country": "NSEH1", "y": 55.22300, "x": 3.78700},
-            {"country": "NSEH2", "y": 55.69354, "x": 3.97940}], index=["BHEH", "NSEH1", "NSEH2"])
-        self.EI_capacity = pd.DataFrame([
-            {"p_nom_max": 3000, "bus": "BHEH", "carrier": "offwind-dc"},
-            {"p_nom_max": 10000, "bus": "NSEH1", "carrier": "offwind-dc"},
-            {"p_nom_max": 10000, "bus": "NSEH2", "carrier": "offwind-dc"}])
-        self.added_DC_lines = pd.DataFrame(
-            {"p_nom": [1400, 2000, 2000, 700], "length": [720, 267, 400, 300], "index_x": [299, 198, 170, 513],
-             "index_y": [419, 111, 93, 116], "tags": [
-                "North Sea Link 2021: https://tyndp2020-project-platform.azurewebsites.net/projectsheets/transmission/110",
-                "hvdc corridor norGer to WesGer 1034: https://tyndp2020-project-platform.azurewebsites.net/projectsheets/transmission/1034",
-                "hvdc corridor norGer to WesGer 1034: https://tyndp2020-project-platform.azurewebsites.net/projectsheets/transmission/1034",
-                "Hansa Power Bridge 1 https://tyndp2020-project-platform.azurewebsites.net/projectsheets/transmission/176"]})
-        self.added_AC_lines = pd.DataFrame(
-            {"s_nom": [6000.0,1000.0,500.0,1500.0,300.0,400.0,500.0,1500.0,1000.0,3200.0,900.0], "length": [100.0, 40.0, 237.5, 182.0, 27.0, 46.0, 125.0, 95.0, 175.0, 60.0, 200.0], "x":[24.6, 9.84, 58.425, 44.772, 6.642, 11.316, 30.75, 23.37, 43.05, 14.76, 49.2], "index_x": [0, 26, 28, 85, 119, 142, 170, 180, 225, 303, 490],
-             "index_y": [8, 138, 30, 119, 364, 217, 191, 198, 238, 327, 505]})
-        self.flexlines_EI = pd.DataFrame(
-            {"Pmax": [500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500],
-             "from": [523, 523, 523, 523, 523, 523, 523, 522, 522, 522, 522, 522, 522, 521, 521, 521, 521],
-             "to": [522, 403, 212, 209, 170, 376, 357, 279, 170, 103, 24, 357, 376, 62, 467, 218, 513],
-             "EI": [1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0]})
 
         self.TRM = 0.7
         self.country_selection = ['BE', 'CZ', 'DE', 'DK', 'FI', 'NL', 'NO', 'PL', 'SE', 'UK', "NSEH1", "NSEH2", "BHEH"]
@@ -136,78 +89,75 @@ class model_data:
     def __init__(self, create_res,reduced_ts, export_files, run_parameter):
         self.CO2_price = run_parameter.CO2_price
         #reading in the files
-        busses_raw = pd.read_csv(run_parameter.import_folder+ "PyPSA_elec1024/buses.csv", index_col=0)
-        generators_raw = pd.read_csv(run_parameter.import_folder + "PyPSA_elec1024/generators.csv", index_col=0)
-        lines_raw = pd.read_csv(run_parameter.import_folder + "PyPSA_elec1024/lines.csv", index_col=0)
-        links_raw = pd.read_csv(run_parameter.import_folder + "PyPSA_elec1024/links.csv", index_col=0)
-        load_raw = pd.read_csv(run_parameter.import_folder+ "PyPSA_elec1024/load.csv", index_col=0).reset_index(drop=True)
-        ror_ts = pd.read_csv(run_parameter.import_folder + "PyPSA_elec1024/hydro_ror_ts.csv", low_memory=False)
-        dam_maxsum_ts = pd.read_csv(run_parameter.import_folder + "PyPSA_elec1024/hydro_dam_ts.csv", low_memory=False)
-        hydro_database = pd.read_csv(run_parameter.import_folder+ "jrc-hydro-power-plant-database.csv")
+        busses_raw =  pd.read_csv(run_parameter.import_folder + "powergamma/grid_nordelNew_bus.csv", sep=";")
+        generators_raw = pd.read_csv(run_parameter.import_folder + "powergamma/grid_nordelNew_gen.csv", sep=";")
+        coordinates= pd.read_csv(run_parameter.import_folder + "powergamma/nordel_coordinates.csv", index_col=0)
+        #load_raw = pd.read_csv(run_parameter.import_folder+ "PyPSA_elec1024/load.csv", index_col=0).reset_index(drop=True)
+        lines_raw = pd.read_csv(run_parameter.import_folder + "powergamma/grid_nordelNew_branch.csv", sep=";")
+        #hydro_database = pd.read_csv(run_parameter.import_folder+ "jrc-hydro-power-plant-database.csv")
 
         # cleaning the nodes dataframe
-        run_parameter.country_selection.append("GB")
-        #adding the EI's
-        busses_raw = pd.concat([busses_raw, run_parameter.EI_bus])
-        busses_filtered = busses_raw[busses_raw["country"].isin(run_parameter.country_selection)].reset_index().reset_index()
-        busses_filtered = busses_filtered.replace({"GB": "UK"})
-        busses_filtered = busses_filtered[["level_0", "index", "x", "y", "country"]]
-        busses_filtered.columns = ["index", "old_index", "LON", "LAT", "country"]
+
+        #attaching the coordinates
+        busses_coordinates = busses_raw.merge(coordinates[["lat", "lon"]], how = "left", left_on = "bus_id", right_index=True)
+        busses_filtered = busses_coordinates[["bus_id", "area", "lat", "lon"]]
+        busses_filtered.columns = ["bus_id", "country", "LON", "LAT"]
         self.nodes = busses_filtered
 
         # resolve bidding zones in NO and SE
-        self.resolve_bidding_zones()
+        #self.resolve_bidding_zones()
 
         #cleaning the conventional plants
-        generators = pd.concat([generators_raw,run_parameter.EI_capacity])
-        generators_matched = generators.merge(self.nodes[["index", "old_index", "country", "bidding_zone"]], how="left",left_on="bus", right_on="old_index")
-        generators_filtered = generators_matched[generators_matched['index'].notnull()] #take only the ones that are in the countries we want to have
-        conventionals_filtered = generators_filtered[generators_filtered["carrier"].isin(["CCGT", "OCGT", "nuclear", "biomass", "coal", "lignite", "oil"])]
-        conventionals = conventionals_filtered[["p_nom", "carrier", "marginal_cost", "efficiency", "co2_fac","index", "bidding_zone"]].reset_index(drop=True)
-        conventionals.columns = ["P_inst", "type", "mc","efficiency", "co2_fac", "bus", "bidding_zone"]
+        generators_raw = generators_raw[["bus_id", "Pmax", "Pmin", "Gtype", "MC", "Start_up"]]
+        generators_matched = generators_raw.merge(self.nodes.reset_index(), how="left", left_on="bus_id", right_on="bus_id")
+        generators_matched = generators_matched[["index", "country", "Pmax", "Pmin", "Gtype", "MC", "Start_up"]]
+        generators_matched.columns = ["bus", "country", "pmax", "pmin", "carrier", "mc","ramp_up"]
+        #generators_filtered = generators_matched[generators_matched['index'].notnull()] #take only the ones that are in the countries we want to have
+        conventionals_filtered = generators_matched[generators_matched["carrier"].isin(["gas", "hard_coal", "oil", "Nuclear", "not", "Renew_other_than_wind"])]
+        conventionals = conventionals_filtered.reset_index(drop=True)
         conventionals["bus"] = conventionals["bus"].astype(int)
 
-        solar_matched = generators_filtered[generators_filtered["carrier"].isin(["solar"])]
-        wind_matched = generators_filtered[generators_filtered["carrier"].isin(["onwind", "offwind-ac", "offwind-dc"])]
-        solar_filtered = solar_matched[["p_nom_max", "carrier", "marginal_cost", "index", "country", "bidding_zone"]].reset_index(drop=True)
-        solar_filtered.columns = ["max", "type", "mc", "bus", "country", "bidding_zone"]
-        solar_filtered = solar_filtered.replace({"solar": "Solar"})
-        solar_filtered["bus"] = solar_filtered["bus"].astype(int)
-        wind_filtered = wind_matched[["p_nom_max", "carrier", "marginal_cost", "index", "country", "bidding_zone"]].reset_index(drop=True)
-        wind_filtered.columns = ["max", "type", "mc", "bus", "country", "bidding_zone"]
-        wind_filtered = wind_filtered.replace({"onwind": "onwind", "offwind-ac": "offwind", "offwind-dc": "offwind"})
-        wind_filtered["bus"] = wind_filtered["bus"].astype(int)
+        #solar_matched = generators_filtered[generators_filtered["carrier"].isin(["solar"])]
+        #wind_matched = generators_matched[generators_matched["carrier"].isin(["onwind", "offwind-ac", "offwind-dc"])]
+        #solar_filtered = solar_matched[["p_nom_max", "carrier", "marginal_cost", "index", "country", "bidding_zone"]].reset_index(drop=True)
+        #solar_filtered.columns = ["max", "type", "mc", "bus", "country", "bidding_zone"]
+        #solar_filtered = solar_filtered.replace({"solar": "Solar"})
+        #solar_filtered["bus"] = solar_filtered["bus"].astype(int)
+        #wind_filtered = wind_matched[["p_nom_max", "carrier", "marginal_cost", "index", "country", "bidding_zone"]].reset_index(drop=True)
+        #wind_filtered.columns = ["max", "type", "mc", "bus", "country", "bidding_zone"]
+        #wind_filtered = wind_filtered.replace({"onwind": "onwind", "offwind-ac": "offwind", "offwind-dc": "offwind"})
+        #wind_filtered["bus"] = wind_filtered["bus"].astype(int)
 
-        lines_matched = lines_raw.merge(self.nodes[["index", "old_index"]], how="left", left_on="bus0",right_on="old_index")
-        lines_matched = lines_matched.merge(self.nodes[["index", "old_index"]], how="left", left_on="bus1",right_on="old_index")
+        lines_matched = lines_raw.merge(self.nodes.reset_index()[["index", "bus_id"]], how="left", left_on="bus_from",right_on="bus_id")
+        lines_matched = lines_matched.merge(self.nodes.reset_index()[["index", "bus_id"]], how="left", left_on="bus_to",right_on="bus_id")
         lines_filtered = lines_matched[lines_matched['index_x'].notnull()]
         lines_filtered = lines_filtered[lines_filtered['index_y'].notnull()]
         # https://pypsa.readthedocs.io/en/latest/components.html?highlight=parameters#line-types
-        lines_filtered["x"] = 0.246 * lines_filtered["length"]
+        #lines_filtered["x"] = 0.246 * lines_filtered["length"]
         # add future lines from tyndp data
-        lines_added_projects = pd.concat([lines_filtered, run_parameter.added_AC_lines])
-        lines = lines_added_projects[["s_nom", "x", "index_x", "index_y"]].reset_index(drop=True)
+        #lines_added_projects = pd.concat([lines_filtered, run_parameter.added_AC_lines])
+        lines = lines_filtered[["rate_b", "x", "index_x", "index_y"]].reset_index(drop=True)
         lines.columns = ["pmax", "x", "from", "to"]
         lines["from"] = lines["from"].astype(int)
         lines["to"] = lines["to"].astype(int)
 
-        lines_DC_matched = links_raw.merge(self.nodes[["index", "old_index"]], how="left", left_on="bus0",right_on="old_index")
-        lines_DC_matched = lines_DC_matched.merge(self.nodes[["index", "old_index"]], how="left", left_on="bus1",right_on="old_index")
-        lines_DC_filtered = lines_DC_matched[lines_DC_matched['index_x'].notnull()]
-        lines_DC_filtered = lines_DC_filtered[lines_DC_filtered['index_y'].notnull()]
-        # See lines_V02.csv
-        lines_DC_filtered = pd.concat([lines_DC_filtered, run_parameter.added_DC_lines])
-        lines_DC = lines_DC_filtered[["p_nom", "index_x", "index_y"]].reset_index(drop=True)
-        lines_DC.columns = ["pmax", "from", "to"]
-        lines_DC["from"] = lines_DC["from"].astype(int)
-        lines_DC["to"] = lines_DC["to"].astype(int)
-        lines_DC.insert(3, "EI", 'N/A')
-        lines_DC = pd.concat([lines_DC, run_parameter.flexlines_EI], ignore_index=True)
+        # lines_DC_matched = links_raw.merge(self.nodes[["index", "old_index"]], how="left", left_on="bus0",right_on="old_index")
+        # lines_DC_matched = lines_DC_matched.merge(self.nodes[["index", "old_index"]], how="left", left_on="bus1",right_on="old_index")
+        # lines_DC_filtered = lines_DC_matched[lines_DC_matched['index_x'].notnull()]
+        # lines_DC_filtered = lines_DC_filtered[lines_DC_filtered['index_y'].notnull()]
+        # # See lines_V02.csv
+        # lines_DC_filtered = pd.concat([lines_DC_filtered, run_parameter.added_DC_lines])
+        # lines_DC = lines_DC_filtered[["p_nom", "index_x", "index_y"]].reset_index(drop=True)
+        # lines_DC.columns = ["pmax", "from", "to"]
+        # lines_DC["from"] = lines_DC["from"].astype(int)
+        # lines_DC["to"] = lines_DC["to"].astype(int)
+        # lines_DC.insert(3, "EI", 'N/A')
+        # lines_DC = pd.concat([lines_DC, run_parameter.flexlines_EI], ignore_index=True)
 
         lines["max"] = lines["pmax"] * run_parameter.TRM
-        lines_DC["max"] = lines_DC["pmax"] * run_parameter.TRM
+        #lines_DC["max"] = lines_DC["pmax"] * run_parameter.TRM
         self.ac_lines = lines
-        self.dc_lines = lines_DC
+        #self.dc_lines = lines_DC
 
 
         # load TYNDP values

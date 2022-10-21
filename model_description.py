@@ -1,23 +1,25 @@
-import timeit
-import gurobipy as gp
-from gurobipy import GRB
-import pandas as pd
-import numpy as np
-from helper_functions import ren_helper2, demand_helper2, create_encyclopedia, hoesch, distance_line, export
-from import_data_object import model_data, run_parameter
-from cyclefinding import cycles
 import pickle
+import timeit
+
+import gurobipy as gp
+import numpy as np
+import pandas as pd
+from gurobipy import GRB
+
+from cyclefinding import cycles
+from helper_functions import ren_helper2, demand_helper2, create_encyclopedia, hoesch, distance_line
+from import_data_object import model_data, run_parameter
 
 starttime = timeit.default_timer()
 
 #load model parameters
-run_parameter= run_parameter(scenario_name = "Energy_island_scenario")
+run_parameter= run_parameter(scenario_name = "nordic_grid")
 run_parameter.create_scenarios()
 
 data = model_data(create_res = True ,reduced_ts = True, export_files= True, run_parameter = run_parameter)
 
 # Create a new model
-model = gp.Model("Energy_Island_Investment_Dispatch")
+model = gp.Model("nordic_dispatch")
 
 #Sets
 T = range(run_parameter.timesteps)  # hours
@@ -37,8 +39,6 @@ C = range(len(L)-len(N)+1) #C_cl_df.index
 I = data.dc_lines[data.dc_lines["EI"].isin([0,1,2,3])].index  # BHEI
 D = data.dc_lines[~data.dc_lines["EI"].isin([0,1,2,3])].index # lines not to the EI's
 Z = data.reservoir_zonal_limit.index
-
-#I= I.drop([ 27,  29,  30,  31,  32,  33,  35,  37,  38,  39,  40,  42,  45,47,  48,  50,  52,  53,  55,  56,  57,  58,  62,  64,  66,  67,68,  71,  72,  73,  75,  76,  79,  80,  81,  82,  83,  84,  86,87,  90,  92,  93,  95,  96,  97,  98,  99, 100, 101, 103, 104,106, 107, 108, 109, 110, 112, 115, 116, 118, 120, 126, 129, 130,131, 132, 133, 138, 139, 141, 143, 144])
 
 #Parameters
 
