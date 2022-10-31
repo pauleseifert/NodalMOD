@@ -38,7 +38,6 @@ I = data.dc_lines[data.dc_lines["EI"].isin([0,1,2,3])].index  # BHEI
 D = data.dc_lines[~data.dc_lines["EI"].isin([0,1,2,3])].index # lines not to the EI's
 Z = data.reservoir_zonal_limit.index
 
-#I= I.drop([ 27,  29,  30,  31,  32,  33,  35,  37,  38,  39,  40,  42,  45,47,  48,  50,  52,  53,  55,  56,  57,  58,  62,  64,  66,  67,68,  71,  72,  73,  75,  76,  79,  80,  81,  82,  83,  84,  86,87,  90,  92,  93,  95,  96,  97,  98,  99, 100, 101, 103, 104,106, 107, 108, 109, 110, 112, 115, 116, 118, 120, 126, 129, 130,131, 132, 133, 138, 139, 141, 143, 144])
 
 #Parameters
 
@@ -127,18 +126,18 @@ if run_parameter.scen in [1]:
         + (gp.quicksum(cap_BH[y, i]* dist_line[i] for i in I) * cost_line * annuity_line)*(run_parameter.timesteps/full_ts)
         )/((1+r)**(5*y))
          for y in Y), GRB.MINIMIZE)
-if run_parameter.scen in [2,3,4]:
-    model.setObjective(
-        gp.quicksum((
-        delta * gp.quicksum(data.dispatchable_generators[y]["mc"][g] * P_C[y, t, g] for g in G for t in T)
-        #+ delta * gp.quicksum(30 * P_R[y, t, r] for r in R for t in T)
-        + delta * price_LL * gp.quicksum(p_load_lost[y, t, n] for n in N for t in T)
-        + delta * storage_penalty * gp.quicksum(P_S[y, t, s] for s in S for t in T)                             #penalty for storage discharge
-        - delta * gp.quicksum(P_H[y, t, e] * run_parameter.R_H[y] for e in E for t in T) * eff_elec
-        + (gp.quicksum(cap_E[y, e] * run_parameter.electrolyser["cost"][e] for e in E)  * (annuity_elec+factor_opex))*(run_parameter.timesteps/full_ts)   #für unterjährig     #CAPEX electrolyser
-        + (gp.quicksum(cap_BH[y, i]* dist_line[i] for i in I) * cost_line * annuity_line)*(run_parameter.timesteps/full_ts)
-        )/((1+r)**(5*y))
-         for y in Y), GRB.MINIMIZE)
+# if run_parameter.scen in [2,3,4]:
+#     model.setObjective(
+#         gp.quicksum((
+#         delta * gp.quicksum(data.dispatchable_generators[y]["mc"][g] * P_C[y, t, g] for g in G for t in T)
+#         #+ delta * gp.quicksum(30 * P_R[y, t, r] for r in R for t in T)
+#         + delta * price_LL * gp.quicksum(p_load_lost[y, t, n] for n in N for t in T)
+#         + delta * storage_penalty * gp.quicksum(P_S[y, t, s] for s in S for t in T)                             #penalty for storage discharge
+#         - delta * gp.quicksum(P_H[y, t, e] * run_parameter.R_H[y] for e in E for t in T) * eff_elec
+#         + (gp.quicksum(cap_E[y, e] * run_parameter.electrolyser["cost"][e] for e in E)  * (annuity_elec+factor_opex))*(run_parameter.timesteps/full_ts)   #für unterjährig     #CAPEX electrolyser
+#         + (gp.quicksum(cap_BH[y, i]* dist_line[i] for i in I) * cost_line * annuity_line)*(run_parameter.timesteps/full_ts)
+#         )/((1+r)**(5*y))
+#          for y in Y), GRB.MINIMIZE)
 
 model.addConstrs((P_C[y, t, g] <= data.dispatchable_generators[y]["P_inst"][g] for g in G for t in T for y in Y), name="GenerationLimitUp")
 model.addConstrs((P_DAM[y, t, g] <= data.reservoir["P_inst"][g] for g in DAM for t in T for y in Y), name="DAMLimitUp")

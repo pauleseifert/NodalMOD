@@ -27,7 +27,7 @@ class run_parameter:
             self.scen = int(sys.argv[4])
             self.sensitivit_scen = int(sys.argv[5])
         # local execution parameters
-        elif (platform == "darwin") or (platform == "windows"):
+        elif (platform == "darwin") or (platform == "win32"):
             self.directory = ""
             self.case_name = scenario_name
             self.years = 3
