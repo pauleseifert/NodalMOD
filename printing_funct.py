@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 import plotly.io as pio
 from plotly.subplots import make_subplots
 
-pio.kaleido.scope.mathjax = None
+#pio.kaleido.scope.mathjax = None
 pio.renderers.default = "browser"
 from colour import Color
 

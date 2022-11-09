@@ -1,12 +1,15 @@
-import timeit
-import gurobipy as gp
-from gurobipy import GRB
-import pandas as pd
-import numpy as np
-from helper_functions import ren_helper2, demand_helper2, create_encyclopedia, hoesch, distance_line, export
-from import_data_object import model_data, run_parameter
-from cyclefinding import cycles
 import pickle
+import timeit
+
+import geopandas as gpd
+import gurobipy as gp
+import numpy as np
+import pandas as pd
+from gurobipy import GRB
+
+from cyclefinding import cycles
+from helper_functions import ren_helper2, demand_helper2, create_encyclopedia, hoesch, distance_line
+from import_data_object import model_data, run_parameter
 
 starttime = timeit.default_timer()
 
@@ -15,6 +18,22 @@ run_parameter= run_parameter(scenario_name = "Energy_island_scenario")
 run_parameter.create_scenarios()
 
 data = model_data(create_res = True ,reduced_ts = True, export_files= True, run_parameter = run_parameter)
+
+
+
+#ToDo
+#c = xxxxx
+#zones festlegen, als set und zuordnung zu den nodes
+shapes = gpd.read_file("data/shapes/NUTS_RG_10M_2021_4326.geojson")
+shapes_filtered = shapes.query("LEVL_CODE ==1 and CNTR_CODE == 'DE'")
+shapes_filtered.plot()
+#Ablauf:
+#-nodes -> zeile -> [["LAT", "LON"]] -> for (loop over shapes_filtered) -> list -> entry with true (namen zurückgeben)
+def lockup_state(row):
+
+    row[["LAT", "LON"]]
+    for state in shapes_filtered
+    return
 
 # Create a new model
 model = gp.Model("Energy_Island_Investment_Dispatch")
@@ -117,34 +136,32 @@ print("Variables made. The time difference is :", timeit.default_timer() - start
 
 # objective function
 # Set objective
-if run_parameter.scen in [1]:
-    model.setObjective(
-        gp.quicksum((
-        delta * gp.quicksum(data.dispatchable_generators[y]["mc"][g] * P_C[y, t, g] for g in G for t in T )
-        + delta * price_LL * gp.quicksum(p_load_lost[y, t, n] for n in N for t in T )
-        + delta * storage_penalty * gp.quicksum(P_S[y, t, s] for s in S for t in T)                             #penalty for storage discharge
-        + (gp.quicksum(cap_BH[y, i]* dist_line[i] for i in I) * cost_line * annuity_line)*(run_parameter.timesteps/full_ts)
-        )/((1+r)**(5*y))
-         for y in Y), GRB.MINIMIZE)
-# if run_parameter.scen in [2,3,4]:
+# if run_parameter.scen in [1]:
 #     model.setObjective(
 #         gp.quicksum((
-#         delta * gp.quicksum(data.dispatchable_generators[y]["mc"][g] * P_C[y, t, g] for g in G for t in T)
-#         #+ delta * gp.quicksum(30 * P_R[y, t, r] for r in R for t in T)
-#         + delta * price_LL * gp.quicksum(p_load_lost[y, t, n] for n in N for t in T)
+#         delta * gp.quicksum(data.dispatchable_generators[y]["mc"][g] * P_C[y, t, g] for g in G for t in T )
+#         + delta * price_LL * gp.quicksum(p_load_lost[y, t, n] for n in N for t in T )
 #         + delta * storage_penalty * gp.quicksum(P_S[y, t, s] for s in S for t in T)                             #penalty for storage discharge
-#         - delta * gp.quicksum(P_H[y, t, e] * run_parameter.R_H[y] for e in E for t in T) * eff_elec
-#         + (gp.quicksum(cap_E[y, e] * run_parameter.electrolyser["cost"][e] for e in E)  * (annuity_elec+factor_opex))*(run_parameter.timesteps/full_ts)   #für unterjährig     #CAPEX electrolyser
 #         + (gp.quicksum(cap_BH[y, i]* dist_line[i] for i in I) * cost_line * annuity_line)*(run_parameter.timesteps/full_ts)
 #         )/((1+r)**(5*y))
 #          for y in Y), GRB.MINIMIZE)
+
+if run_parameter.scen in [1]:
+    model.setObjective(
+        gp.quicksum((
+        gp.quicksum(data.dispatchable_generators[y]["mc"][g] * P_C[y, t, g] for g in G for t in T )
+        #+ price_LL * gp.quicksum(p_load_lost[y, t, n] for n in N for t in T )
+        #+  storage_penalty * gp.quicksum(P_S[y, t, s] for s in S for t in T)
+        + gp.quicksum(P_S[y,t,s] * c[s] for t in T for s in S)
+        + gp.quicksum(res_curtailment[y, t, r] * penalty_curtailment[y,t,z] for t in Z for r in R)
+        ) for y in Y for z in zone), GRB.MINIMIZE)
 
 model.addConstrs((P_C[y, t, g] <= data.dispatchable_generators[y]["P_inst"][g] for g in G for t in T for y in Y), name="GenerationLimitUp")
 model.addConstrs((P_DAM[y, t, g] <= data.reservoir["P_inst"][g] for g in DAM for t in T for y in Y), name="DAMLimitUp")
 model.addConstrs((gp.quicksum(P_DAM[y, t, g] for g in encyc_dam_zones[z] for t in T) <= data.reservoir_zonal_limit[z] for z in Z for y in Y), name="DAMSumUp")
 
 model.addConstrs((P_R[y, t, r] <= data.res_series[y][r][t] for r in R for t in T for y in Y), name="ResGenerationLimitUp")
-model.addConstrs((res_curtailment[y, t, r] == data.res_series[y][r][t] - P_R[y, t, r] for r in R for t in T for y in Y), name="Curtailment")
+model.addConstrs((res_curtailment[y, t, r] == data.res_series[y][r][t] - P_R[y, t, r] for r in R for t in T for y in Y), name="RESCurtailment")
 model.addConstrs((p_load_lost[y, t,j] <= demand_helper2(j,t, y,demand_dict) for j in N for t in T for y in Y), name= "limitLoadLoss")
 model.addConstrs((P_S[y, t, s] <= data.storage["Pmax_out"][s] for s in S for t in T for y in Y), name="StoragePowerOutput")
 model.addConstrs((C_S[y, t, s] <= data.storage["Pmax_in"][s] for s in S for t in T for y in Y), name="StoragePowerInput")
