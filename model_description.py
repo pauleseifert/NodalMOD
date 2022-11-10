@@ -50,6 +50,16 @@ data.nodes
 zone = ["DE1","DE2", "DE3", "DE4", "NO1", "NO2", "NO3", "DK1", "DK2", "BALTIC", "NORTH"]
 
 
+for z in zone:
+
+total generation = sum ()
+
+# Beispiele
+#    c_cap = [gen[0]+gen[1] for gen,p in zip(network.generators.index, network.generators.p_nom) if 'solar' in gen or 'wind' in gen if p!=0]
+#    c_cap=list(set(c_cap))
+#    countries = network.buses.country.unique()
+#    countries = (list(set(countries)-set(c_cap)))
+
 
 #ToDo
 #c = xxxxx
@@ -64,6 +74,7 @@ zone = ["DE1","DE2", "DE3", "DE4", "NO1", "NO2", "NO3", "DK1", "DK2", "BALTIC", 
 #    row[["LAT", "LON"]]
 #    for state in shapes_filtered
 #    return
+
 
 # Create a new model
 model: Model = gp.Model("Energy_Island_Investment_Dispatch")
