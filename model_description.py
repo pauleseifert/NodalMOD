@@ -2,7 +2,7 @@ import pickle
 import timeit
 
 
-#import geopandas as gpd #FEHLER?
+
 import gurobipy as gp
 import numpy as np
 import pandas as pd
@@ -30,29 +30,34 @@ run_parameter.create_scenarios()
 
 data = model_data(create_res = False,reduced_ts = True, export_files= True, run_parameter = run_parameter)
 
-data.nodes
-
-#ToDo
-#c = xxxxx
 #zones festlegen, als set und zuordnung zu den nodes
-#shapes = gpd.read_file("data/shapes/NUTS_RG_10M_2021_4326.geojson")
-#shapes_filtered = shapes.query("LEVL_CODE ==1 and CNTR_CODE == 'DE'")
-#shapes_filtered.plot()
-#Ablauf:
-#-nodes -> zeile -> [["LAT", "LON"]] -> for (loop over shapes_filtered) -> list -> entry with true (namen zurückgeben)
-#def lockup_state(row):
+shapes = gpd.read_file('data/shapes/NUTS_RG_10M_2021_4326.geojson')
+shapes_filtered = shapes.query("LEVL_CODE ==1 and CNTR_CODE == 'DE'")
+shapes_filtered.plot()
 
-#    row[["LAT", "LON"]]
-#    for state in shapes_filtered
- #   return
+df_buses = pd.read_csv("data/PyPSA_elec1024/buses.csv", index_col=0)
+#df_buses['geometry'] = [Point(xy) for xy in zip(df_buses.x, df_buses.y)]
+gdf_buses = gpd.GeoDataFrame(df_buses, geometry=gpd.points_from_xy(df_buses.x, df_buses.y), crs="EPSG:4326")
+#df_buses_selected = ['name', 'geometry']
+df_buses.head()
+# coordinate systems are correct?
+#df_buses_selected.crs == shapes_filtered.crs
+#Spatial Join
+#sjoined_nodes_states = gpd.sjoin(df_buses["geometry"],shapes_filtered, op="within")
+sjoined_nodes_states = gdf_buses.sjoin(shapes_filtered[["NUTS_NAME","NUTS_ID","geometry"]], how ="left")
+#How many nodes are in each state bzw zone "state_Bayern" = "NUTS_ID":"DE2"
+# First grouping based on "NUTS_ID" - Within each team we are grouping based on "Position"
+df_nodes_Bayern = sjoined_nodes_states.groupby("NUTS_ID").count()
 
-#Zonen einfügen!
-zone = ["DE1","DE2", "DE3", "DE4", "NO1", "NO2", "NO3", "DK1", "DK2", "BALTIC", "NORTH"]
+#df_nodes_Bayern = grouped.to_frame().reset_index()
+#df.columns = ["NUTS_ID", ‘listings_count’]
+
+#zone = ["DE1","DE2", "DE3", "DE4", "NO1", "NO2", "NO3", "DK1", "DK2", "BALTIC", "NORTH"]
 
 
-for z in zone:
+#for z in zone:
 
-total generation = sum ()
+#total generation = sum ()
 
 # Beispiele
 #    c_cap = [gen[0]+gen[1] for gen,p in zip(network.generators.index, network.generators.p_nom) if 'solar' in gen or 'wind' in gen if p!=0]

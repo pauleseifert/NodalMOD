@@ -23,6 +23,8 @@ starlette = "*"
 numba = "*"
 openpyxl = "*"
 geopandas = "*"
+rtree = "*"
+pygeos = "*"
 
 [dev-packages]
 
