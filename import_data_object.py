@@ -18,6 +18,7 @@ import sys
 
 class run_parameter:
     def __init__(self, scenario_name):
+        #hier werte je nach betrachtetem Szenario einfügen
         #capture batch system specific parameters for running on a cluster computer
         if platform == "linux" or platform == "linux2":
             self.directory = "/work/seifert/powerinvest/"       #patch on the cluster computer
@@ -30,9 +31,9 @@ class run_parameter:
         elif (platform == "darwin") or (platform == "win32"):
             self.directory = ""
             self.case_name = scenario_name
-            self.years = 3
+            self.years = 1
             self.timesteps = 10
-            self.scen = 1
+            self.scen = 1 # hier szenario 5 erstellen für zonen
             self.sensitivit_scen = 0
         self.solving = False
         self.reduced_TS = False
@@ -41,6 +42,7 @@ class run_parameter:
         self.import_folder = self.directory + "data/"
         os.makedirs(self.export_folder, exist_ok=True)
 
+#je nachdem was oben bei scen eingetragen ist wird hier der case betrachtet
     def create_scenarios(self):
         match self.scen:
             case 1:
@@ -69,12 +71,14 @@ class run_parameter:
                     "cost": [645000, 645000, 645000, 450000, 450000, 450000, 450000, 450000, 450000, 450000, 450000, 450000,
                              450000, 450000, 450000, 450000, 450000]})
                 print("Stakeholder case")
+#            case 5:  weiteren Case für Bidding Zones erstellen
 
+# je nachdem was oben bei sensitivity_scen eingetragen ist wird hier der case betrachtet
         match self.sensitivit_scen:
             case 0:
                 print("Base scenario sensitivity")
                 self.CO2_price = [80, 120, 160]
-                self.R_H = [108, 108, 108]
+                self.R_H = [108, 108, 108] #R_H = Revenue hydrogen
                 self.grid_extension = False
             case 1:
                 print("Low H2 price subscen")
@@ -95,8 +99,11 @@ class run_parameter:
                 print("Grid extension")
                 self.CO2_price = [80, 120, 160]
                 self.R_H = [108, 108, 108]
-                self.grid_extension = True
-        self.add_future_windcluster = True
+                self.grid_extension = True #nur hier wird grid extentsion berücksichtigt
+
+
+        #das hier werden immer die offshore islands initialisiert, unabhängig vom case
+        self.add_future_windcluster = True #zukünftige Windcluster werden berücksichtigt
         self.EI_bus = pd.DataFrame([
             {"country": "BHEH", "y": 55.13615337829421, "x": 14.898639089359104},
             {"country": "NSEH1", "y": 55.22300, "x": 3.78700},
@@ -129,7 +136,7 @@ class run_parameter:
                          'NSEH', 'BHEH']
         self.bidding_zones_overview = pd.DataFrame({"bidding zones": ['AL', 'AT', 'BA', 'BE', 'BG', 'CH', 'CZ', 'DE', 'DK1','DK2', 'ES', 'FI', 'FR', 'GR', 'HR', 'HU', 'IE', 'IT1','IT2', 'IT3', 'IT4', 'IT5', 'ME', 'MK', 'NL', 'NO1','NO5', 'NO3', 'NO4', 'NO2', 'PL', 'PT', 'RO', 'RS','SE1', 'SE2', 'SE3', 'SE4', 'SI', 'SK', 'UK', 'CBN','TYNDP', 'NSEH', 'BHEH'],
                                                "zone_number": [i for i, v in enumerate(bidding_zones)],
-                                               "country": ["AL", "AT", "BA", "BE", "BG", "CH", "CZ", "DE", "DK", "DK","ES", "FI", "FR", "GR", "HR", "HU", "IE", "IT", "IT", "IT","IT", "IT", "ME", "MK", "NL", "NO", "NO", "NO", "NO", "NO","PL", "PT", "RO", "RS", "SE", "SE", "SE", "SE", "SI", "SK","UK", "CBN", "TYNDP", "NSEH", "BHEH"]})
+                                               "country": ["AL", "AT", "BA", "BE", "BG", "CH", "CZ", "DE", "DK", "DK","ES", "FI", "FR", "GR", "HR", "HU", "IE", "IT", "IT", "IT","IT", "IT", "ME", "MK", "NL", "NO", "NO", "NO", "NO", "NO","PL", "PT", "RO", "RS", "SE", "SE", "SE", "SE", "SI", "SK","UK", "CBN", "TYNDP", "NSEH", "BHEH"]}) #
 
 
 class model_data:
@@ -210,7 +217,7 @@ class model_data:
         self.dc_lines = lines_DC
 
 
-        # load TYNDP values
+        # load TYNDP values (DEMAND!!!) auf 2030 begrenzen
         self.tyndp_values(path=run_parameter.import_folder, bidding_zone_encyc=run_parameter.bidding_zones_overview)
 
         # new demand
@@ -274,7 +281,7 @@ class model_data:
         ror_bus_ts_np = np.multiply(ror_bus_ts_matrix_np, P_max)
         self.ror_series = pd.DataFrame(ror_bus_ts_np, columns=ror_aggregated.index)
 
-        # PHS
+        # PHS pumped hydro storage
         PHS = hydro_df[hydro_df['type'] == 'HPHS']
         PHS["storage_capacity_MWh"] = PHS["storage_capacity_MWh"].fillna(default_storage_capacity)
         PHS["pumping_MW"] = PHS["pumping_MW"].fillna(PHS["P_inst"])
@@ -319,7 +326,7 @@ class model_data:
                 pickle.dump(self.res_series, f)
 
 
-    def conv_scaling_country_specific(self):
+    def conv_scaling_country_specific(self): #??? was macht das?
         conventional_h20 = self.dispatchable_generators[self.dispatchable_generators["type"].isin(["HDAM"])]
         conventional_fossil = self.dispatchable_generators[~self.dispatchable_generators["type"].isin(["HDAM"])]
         conventional_fossil_grouped = conventional_fossil.groupby(["bidding_zone", "type"]).sum()["P_inst"]
@@ -1029,20 +1036,20 @@ class gurobi_variables:
             pd.DataFrame(self.results["P_R"][y, :, :], columns=self.additional_columns["P_R"]).to_csv(folder + str(y) + "_P_R.csv")
             # P_DAM
             pd.DataFrame(self.results["P_DAM"][y, :, :]).to_csv(folder + str(y) + "_P_DAM.csv")
-            if scen in [2, 3, 4]:
-                # cap_E
-                pd.DataFrame(self.results["cap_E"]).to_csv(folder + "cap_E.csv")
-                # P_H
-                pd.DataFrame(self.results["P_H"][y, :, :]).to_csv(folder + str(y) + "_P_H.csv")
-            # load lost
-            pd.DataFrame(self.results["p_load_lost"][y, :, :]).to_csv(folder + str(y) + "_p_load_lost.csv")
-            # res_curtailment
-            pd.DataFrame(self.results["res_curtailment"][y, :, :], columns=self.additional_columns["res_curtailment"]).to_csv(folder + str(y) + "_res_curtailment.csv")
-            # storage
-            pd.DataFrame(self.results["P_S"][y, :, :]).to_csv(folder + str(y) + "_P_S.csv")
-            pd.DataFrame(self.results["C_S"][y, :, :]).to_csv(folder + str(y) + "_C_S.csv")
-            pd.DataFrame(self.results["L_S"][y, :, :]).to_csv(folder + str(y) + "_L_S.csv")
-            # AC line flow
-            pd.DataFrame(self.results["F_AC"][y, :, :]).to_csv(folder + str(y) + "_F_AC.csv")
-            # DC line flow
-            pd.DataFrame(self.results["F_DC"][y, :, :]).to_csv(folder + str(y) + "_F_DC.csv")
+#            if scen in [2, 3, 4]:
+#                # cap_E
+#                pd.DataFrame(self.results["cap_E"]).to_csv(folder + "cap_E.csv")
+#                # P_H
+#                pd.DataFrame(self.results["P_H"][y, :, :]).to_csv(folder + str(y) + "_P_H.csv")
+#            # load lost
+#            pd.DataFrame(self.results["p_load_lost"][y, :, :]).to_csv(folder + str(y) + "_p_load_lost.csv")
+#            # res_curtailment
+#            pd.DataFrame(self.results["res_curtailment"][y, :, :], columns=self.additional_columns["res_curtailment"]).to_csv(folder + str(y) + "_res_curtailment.csv")
+#            # storage
+#            pd.DataFrame(self.results["P_S"][y, :, :]).to_csv(folder + str(y) + "_P_S.csv")
+#            pd.DataFrame(self.results["C_S"][y, :, :]).to_csv(folder + str(y) + "_C_S.csv")
+#            pd.DataFrame(self.results["L_S"][y, :, :]).to_csv(folder + str(y) + "_L_S.csv")
+#            # AC line flow
+#            pd.DataFrame(self.results["F_AC"][y, :, :]).to_csv(folder + str(y) + "_F_AC.csv")
+#            # DC line flow
+#            pd.DataFrame(self.results["F_DC"][y, :, :]).to_csv(folder + str(y) + "_F_DC.csv")

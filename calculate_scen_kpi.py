@@ -8,8 +8,8 @@ from import_data_object import kpi_data, run_parameter
 
 run_parameter= run_parameter(scenario_name = "Energy_island_scenario")
 
-kpis = {scen : kpi_data(run_parameter = run_parameter, scen= scen) for scen in run_parameter.scen}
-
+kpis = {kpi_data(run_parameter = run_parameter, scen= 1)}
+#kpis = {scen : kpi_data(run_parameter = run_parameter, scen= scen) for scen in run_parameter.scen}
 #scenario spanning analysis
 scen_folder = run_parameter.export_folder +"maps/sensitivity" +str(run_parameter.subscen)+"/"
 if not os.path.exists(scen_folder):

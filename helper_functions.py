@@ -379,7 +379,7 @@ def demand_helper2(j,t,y, nodes_dict):
         return nodes_dict[y][j][t]
     else:
         return 0
-def create_encyclopedia(data_series):
+def create_encyclopedia(data_series: object) -> object:
     mydict = data_series.to_dict()
     newd = collections.defaultdict(list)
     for k, vl in mydict.items():
