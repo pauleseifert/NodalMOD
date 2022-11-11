@@ -1,13 +1,11 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
 import plotly.graph_objects as go
-import plotly.io as pio
-from plotly.subplots import make_subplots
-pio.kaleido.scope.mathjax = None
-pio.renderers.default = "browser"
+# pio.kaleido.scope.mathjax = None
+# pio.renderers.default = "browser"
 from colour import Color
+from plotly.subplots import make_subplots
 
-from dataclasses import dataclass
 
 # def graph_poncelet(full_ts, poncelet_ts):
 #     #row = 0

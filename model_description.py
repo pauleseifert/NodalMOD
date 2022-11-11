@@ -1,17 +1,19 @@
-import timeit
-import gurobipy as gp
-from gurobipy import GRB
-import pandas as pd
-import numpy as np
-from helper_functions import ren_helper2, demand_helper2, create_encyclopedia, hoesch, distance_line, export
-from import_data_object import model_data, run_parameter
-from cyclefinding import cycles
 import pickle
+import timeit
+
+import gurobipy as gp
+import numpy as np
+import pandas as pd
+from gurobipy import GRB
+
+from cyclefinding import cycles
+from helper_functions import ren_helper2, demand_helper2, create_encyclopedia, hoesch, distance_line
+from import_data_object import model_data, run_parameter
 
 starttime = timeit.default_timer()
 
 #load model parameters
-run_parameter= run_parameter(scenario_name = "Energy_island_scenario")
+run_parameter=run_parameter(scenario_name = "Energy_island_scenario")
 run_parameter.create_scenarios()
 
 data = model_data(create_res = True ,reduced_ts = True, export_files= True, run_parameter = run_parameter)
@@ -34,8 +36,8 @@ L = data.ac_lines.index
 LDC = data.dc_lines.index
 C = range(len(L)-len(N)+1) #C_cl_df.index
 # separating the flexlines
-I = data.dc_lines[data.dc_lines["EI"].isin([0,1,2,3])].index  # BHEI
-D = data.dc_lines[~data.dc_lines["EI"].isin([0,1,2,3])].index # lines not to the EI's
+I = data.dc_lines[data.dc_lines["EI"].isin(["BHEH", "NSEH1", "NSEH2", "CLUSTER"])].index  # BHEI
+D = data.dc_lines[~data.dc_lines["EI"].isin(["BHEH", "NSEH1", "NSEH2", "CLUSTER"])].index # lines not to the EI's
 Z = data.reservoir_zonal_limit.index
 
 #I= I.drop([ 27,  29,  30,  31,  32,  33,  35,  37,  38,  39,  40,  42,  45,47,  48,  50,  52,  53,  55,  56,  57,  58,  62,  64,  66,  67,68,  71,  72,  73,  75,  76,  79,  80,  81,  82,  83,  84,  86,87,  90,  92,  93,  95,  96,  97,  98,  99, 100, 101, 103, 104,106, 107, 108, 109, 110, 112, 115, 116, 118, 120, 126, 129, 130,131, 132, 133, 138, 139, 141, 143, 144])
@@ -47,7 +49,7 @@ T_line = 40     #Lifetime line
 T_elec = 30     #Lifetime electrolyser
 factor_opex = 0.02       #share of capex for opex each year
 cost_line = 1950         #/MW/km
-dist_line = distance_line(bus_overview=data.nodes, line_overview=data.dc_lines, indices=I)
+dist_line = distance_line(nodes=data.nodes, dc_line_overview=data.dc_lines, index=I)
 eff_elec = 0.68
 storage_efficiency = 0.8
 annuity_line = r/(1-(1/((1+r)**T_line)))
@@ -69,8 +71,7 @@ x_numpy = pd.Series(data.ac_lines["x"]).to_numpy()
 C_cl_x_multi = np.multiply(C_cl_numpy, x_numpy)
 C_cl_x_multi_dict = pd.DataFrame(C_cl_x_multi).to_dict()
 
-#here I do some dictionary reordering. I want to have all indices as a list given selected bus. If there is none, I want
-# to have an empty list. I call this "encyclopedia"
+#here I do some dictionary reordering.
 encyc_powerplants_bus = create_encyclopedia(data.dispatchable_generators[0]["bus"])
 encyc_storage_bus = create_encyclopedia(data.storage["bus"])
 encyc_DC_from = create_encyclopedia(data.dc_lines["from"])

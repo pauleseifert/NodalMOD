@@ -1,11 +1,12 @@
-import pandas as pd
-import numpy as np
-from numba import jit, int32, float32
-import numba
-from helper_functions import merge_timeseries_supply, give_nearest_bus_relative_position, distance_calc, get_wind_yearly,get_solar_yearly, res_normalisation
 import sys
 import timeit
 
+import numpy as np
+import pandas as pd
+from numba import jit
+
+from helper_functions import merge_timeseries_supply, give_nearest_bus_relative_position, distance_calc, \
+    get_wind_yearly, get_solar_yearly, res_normalisation
 
 
 def hydro_mapping(bus_CM):
@@ -100,7 +101,7 @@ def new_res_mapping(self, old_solar, old_wind, create_res_mapping, location, que
         EI_wind.rename(columns={"max":"P_inst"}, inplace=True)
         offshore_windfarm_clustered= kinis_windfarms_cluster(self = self, location=location)
         wind_concat = pd.concat([pypsa_wind_normalised, EI_wind])
-        wind_df = wind_concat.groupby(["type", "bus"]).sum()["P_inst"].reset_index()
+        wind_df = wind_concat.groupby(["type", "bus"]).sum(numeric_only = True)["P_inst"].reset_index()
 
 
         if query_ts == True:
@@ -126,7 +127,7 @@ def new_res_mapping(self, old_solar, old_wind, create_res_mapping, location, que
 
         #EI_solar = old_solar[old_solar["country"].isin(["NSEH1", "NSEH2", "BHEH"])]
         solar_df = pd.concat([solar_od, pypsa_solar_normalised])
-        solar_df = solar_df.groupby(["bus"]).sum()["P_inst"].reset_index()
+        solar_df = solar_df.groupby(["bus"]).sum(numeric_only = True)["P_inst"].reset_index()
         solar_df["type"] = "solar"
         #solar_df.merge(bus_CM["country"], left_on = "bus", right_index = True).groupby("country").sum()["max"].to_csv(location+"aggregated_solar_capacity_country.csv")
 
@@ -146,7 +147,7 @@ def new_res_mapping(self, old_solar, old_wind, create_res_mapping, location, que
             df_2020_capacity_bz_grouped = df_2020_capacity_bz.groupby(["bidding_zone", "type"]).sum().reset_index()
             if type == "wind":
                 df_2020_capacity_bz_type_grouped= df_2020_capacity_bz.groupby(["bidding_zone", "type"]).sum().reset_index()
-                kinis_offshore_windfarms_grouped = kinis_offshore_windfarms.groupby(["bidding_zone"]).sum()["P_inst"]
+                kinis_offshore_windfarms_grouped = kinis_offshore_windfarms.groupby(["bidding_zone"]).sum(numeric_only = True)["P_inst"]
                 scaled = {y: get_wind_yearly(tyndp_values=self.tyndp_installed_capacity,df_2020_capacity_bz=df_2020_capacity_bz, year=year, kinis_offshore_windfarms = kinis_offshore_windfarms_grouped, df_2020_capacity_bz_type_grouped = df_2020_capacity_bz_type_grouped) for year, y in zip([2030, 2035, 2040], [0, 1, 2])}
             else: #solar
                 scaled = {y: get_solar_yearly(tyndp_values = self.tyndp_installed_capacity,df_2020_capacity_bz = df_2020_capacity_bz, df_2020_capacity_bz_grouped = df_2020_capacity_bz_grouped,year = year, type = type) for year, y in zip([2030, 2035, 2040], [0, 1, 2])}
