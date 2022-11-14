@@ -1,6 +1,5 @@
 import pickle
 import timeit
-
 import geopandas as gpd
 import gurobipy as gp
 import pandas as pd
@@ -55,18 +54,6 @@ df_nodes_Bayern = sjoined_nodes_states.groupby("NUTS_ID").count()
 
 
 #ToDo
-#c = xxxxx
-#zones festlegen, als set und zuordnung zu den nodes
-#shapes = gpd.read_file("data/shapes/NUTS_RG_10M_2021_4326.geojson")
-#shapes_filtered = shapes.query("LEVL_CODE ==1 and CNTR_CODE == 'DE'")
-#shapes_filtered.plot()
-#Ablauf:
-#-nodes -> zeile -> [["LAT", "LON"]] -> for (loop over shapes_filtered) -> list -> entry with true (namen zurückgeben)
-#def lockup_state(row):
-
-#    row[["LAT", "LON"]]
-#    for state in shapes_filtered
-#    return
 
 
 # Create a new model
@@ -91,9 +78,6 @@ D = data.dc_lines[~data.dc_lines["EI"].isin(["BHEH", "NSEH1", "NSEH2", "CLUSTER"
 I = data.dc_lines[data.dc_lines["EI"].isin([0,1,2,3])].index  # BHEI
 D = data.dc_lines[~data.dc_lines["EI"].isin([0,1,2,3])].index # lines not to the EI's
 Z = data.reservoir_zonal_limit.index
-
-
-
 
 #Parameters
 
