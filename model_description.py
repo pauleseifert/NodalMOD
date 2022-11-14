@@ -35,11 +35,9 @@ sjoined_nodes_states = gdf_buses.sjoin(shapes_filtered[["NUTS_NAME","NUTS_ID","g
 #How many nodes are in each state bzw zone "state_Bayern" = "NUTS_ID":"DE2"
 # First grouping based on "NUTS_ID" - Within each team we are grouping based on "Position"
 df_nodes_Bayern = sjoined_nodes_states.groupby("NUTS_ID").count()
+#ToDo
+#größte Aufteilung der Zonen festlegen
 
-#df_nodes_Bayern = grouped.to_frame().reset_index()
-#df.columns = ["NUTS_ID", ‘listings_count’]
-
-#zone = ["DE1","DE2", "DE3", "DE4", "NO1", "NO2", "NO3", "DK1", "DK2", "BALTIC", "NORTH"]
 
 
 #for z in zone:
@@ -52,12 +50,8 @@ df_nodes_Bayern = sjoined_nodes_states.groupby("NUTS_ID").count()
 #    countries = network.buses.country.unique()
 #    countries = (list(set(countries)-set(c_cap)))
 
-
-#ToDo
-
-
 # Create a new model
-model: Model = gp.Model("Energy_Island_Investment_Dispatch")
+model: Model = gp.Model("Offshore_Bidding_Zones")
 
 #Sets
 T = range(run_parameter.timesteps)  # hours
