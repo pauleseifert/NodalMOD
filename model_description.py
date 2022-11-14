@@ -4,11 +4,8 @@ import geopandas as gpd
 import gurobipy as gp
 import pandas as pd
 from gurobipy import GRB
-<<<<<<< Updated upstream
 from gurobipy import Model
-=======
-#from shapely.geometry import Point
->>>>>>> Stashed changes
+
 
 from helper_functions import ren_helper2, demand_helper2, create_encyclopedia
 from import_data_object import model_data, run_parameter
@@ -21,7 +18,7 @@ run_parameter.create_scenarios()
 
 data = model_data(create_res = False,reduced_ts = True, export_files= True, run_parameter = run_parameter)
 
-<<<<<<< Updated upstream
+
 #zones festlegen, als set und zuordnung zu den nodes
 shapes = gpd.read_file('data/shapes/NUTS_RG_10M_2021_4326.geojson')
 shapes_filtered = shapes.query("LEVL_CODE ==1 and CNTR_CODE == 'DE'")
@@ -37,14 +34,13 @@ df_buses.head()
 #Spatial Join
 #sjoined_nodes_states = gpd.sjoin(df_buses["geometry"],shapes_filtered, op="within")
 sjoined_nodes_states = gdf_buses.sjoin(shapes_filtered[["NUTS_NAME","NUTS_ID","geometry"]], how ="left")
-<<<<<<< HEAD
+
 #How many nodes are in each state bzw zone "state_Bayern" = "NUTS_ID":"DE2"
 # First grouping based on "NUTS_ID" - Within each team we are grouping based on "Position"
 df_nodes_Bayern = sjoined_nodes_states.groupby("NUTS_ID").count()
 #ToDo
 #größte Aufteilung der Zonen festlegen
 
-=======
 #Filtern der Columns die wir brauchen für Zones DE
 df_zones_DE = sjoined_nodes_states.query("country == 'DE'")
 df_zones_DE_filtered = df_zones_DE.filter(['NUTS_NAME', 'country', 'NUTS_ID', 'geometry'])
@@ -54,7 +50,6 @@ df_zones_DE_filtered.groupby("NUTS_NAME == 'Bayern'").count()
 #df.columns = ["NUTS_ID", ‘listings_count’]
 
 #zone = ["DE1","DE2", "DE3", "DE4", "NO1", "NO2", "NO3", "DK1", "DK2", "BALTIC", "NORTH"]
->>>>>>> aefc82de55c9f8bb4fde77ad5f9a5988810a09e3
 
 
 #for z in zone:
@@ -67,17 +62,9 @@ df_zones_DE_filtered.groupby("NUTS_NAME == 'Bayern'").count()
 #    countries = network.buses.country.unique()
 #    countries = (list(set(countries)-set(c_cap)))
 
-<<<<<<< HEAD
-=======
-
-#ToDo
-
-
-=======
 #ToDo: create zones
 #ToDo:sum NTCs an den borders
->>>>>>> Stashed changes
->>>>>>> aefc82de55c9f8bb4fde77ad5f9a5988810a09e3
+
 # Create a new model
 model: Model = gp.Model("Offshore_Bidding_Zones")
 
@@ -91,6 +78,8 @@ G = data.dispatchable_generators[0].index
 R = data.res_series[0].columns
 DAM = data.reservoir.index
 S = data.storage.index
+L = data.ac_lines.index
+N = data.nodes.index
 LDC = data.dc_lines.index
 C = range(len(L)-len(N)+1) #C_cl_df.index
 # separating the flexlines
