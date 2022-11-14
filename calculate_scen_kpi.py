@@ -1,21 +1,22 @@
-import pandas as pd
 import os
 
-from printing_funct import plot_bar2_electrolyser, kpi_development, kpi_development2, radar_chart, plot_generation, plotly_maps_bubbles, plotly_maps_lines, plotly_maps_size_lines, plotly_maps_lines_hours, plot_bar_yearstack
-from helper_functions import Myobject
-from sys import platform
+import pandas as pd
+
 from import_data_object import kpi_data, run_parameter
+from printing_funct import plot_bar2_electrolyser, kpi_development2, radar_chart, plot_generation, plotly_maps_bubbles, \
+    plotly_maps_lines, plotly_maps_size_lines, plotly_maps_lines_hours
 
-run_parameter= run_parameter(scenario_name = "Energy_island_scenario")
+#list of scenarios to calculate
+scenarios = [1]
+run_parameter = run_parameter(scenario_name="Energy_island_scenario")
+kpis = {scen : kpi_data(run_parameter = run_parameter, scen= scen) for scen in scenarios}
 
-kpis = {kpi_data(run_parameter = run_parameter, scen= 1)}
-#kpis = {scen : kpi_data(run_parameter = run_parameter, scen= scen) for scen in run_parameter.scen}
 #scenario spanning analysis
-scen_folder = run_parameter.export_folder +"maps/sensitivity" +str(run_parameter.subscen)+"/"
+scen_folder = run_parameter.export_folder +"maps/sensitivity" +str(run_parameter.sensitivity_scen)+"/"
 if not os.path.exists(scen_folder):
     os.makedirs(scen_folder)
 
-if run_parameter.subscen == 0:
+if run_parameter.sensitivity_scen == 0:
     #base scenario
     scen1 = pd.DataFrame({"BHEI": [0, 0, 0], "NSEI 1": [0, 0, 0], "NSEI 2": [0, 0, 0], "Landing points": [0, 0, 0]}, index=[2030, 2035, 2040])
     scen2 = pd.DataFrame({"BHEI": kpis[2].CAP_E.loc["electrolyser_Bornholm"][run_parameter.years].to_list(), "NSEI 1": kpis[2].CAP_E.loc["electrolyser_NS1"][run_parameter.years].to_list(), "NSEI 2": kpis[2].CAP_E.loc["electrolyser_NS2"][run_parameter.years].to_list(), "Landing points": [0, 0, 0]},index=[2030, 2035, 2040])
@@ -75,14 +76,14 @@ if run_parameter.subscen == 0:
     radar_chart(maps_folder=scen_folder, data=df, data2=df2)
 
 #Excel export
-kpi_folder = run_parameter.export_folder +"kpis/"+"sensitivity_scen"+str(run_parameter.subscen)
+kpi_folder = run_parameter.export_folder +"kpis/"+"sensitivity_scen"+str(run_parameter.sensitivity_scen)
 if not os.path.exists(kpi_folder):
     os.makedirs(kpi_folder)
 
 #CAP_BH
 def excel_export(run_parameter, kpis, type, col_sum = False, ts_reduction_backscaling = False):
-    with pd.ExcelWriter(run_parameter.export_folder + "/kpis/" +"sensitivity_scen"+str(run_parameter.subscen)+"/"+ type+'.xlsx') as writer:
-        for scen in run_parameter.scen:
+    with pd.ExcelWriter(run_parameter.export_folder + "/kpis/" +"sensitivity_scen"+str(run_parameter.sensitivity_scen)+"/"+ type+'.xlsx') as writer:
+        for scen in scenarios:
             try:
                 entry = eval("kpis[" + str(scen) + "]." + type)
                 if isinstance(entry, dict):
@@ -116,16 +117,15 @@ excel_export(run_parameter = run_parameter, kpis = kpis, type = "load_factor.ele
 
 #Maps
 
-for scen in run_parameter.scen: plot_generation(generation_temporal = kpis[scen].generation_temporal, maps_folder=scen_folder, scen=scen, year=run_parameter.years[0])
-#for scen in run_parameter.scen: plot_generation(generation_temporal = kpis[scen].generation_temporal, maps_folder=scen_folder, scen=scen, year=run_parameter.years[1])
-for scen in run_parameter.scen: plot_generation(generation_temporal = kpis[scen].generation_temporal, maps_folder=scen_folder, scen=scen, year=run_parameter.years[2])
+for scen in scenarios: plot_generation(generation_temporal = kpis[scen].generation_temporal, maps_folder=scen_folder, scen=scen, year=run_parameter.years[0])
+#for scen in scenarios: plot_generation(generation_temporal = kpis[scen].generation_temporal, maps_folder=scen_folder, scen=scen, year=run_parameter.years[1])
+for scen in scenarios: plot_generation(generation_temporal = kpis[scen].generation_temporal, maps_folder=scen_folder, scen=scen, year=run_parameter.years[2])
 
-for scen in run_parameter.scen: plotly_maps_bubbles(df=kpis[scen].curtailment.location, scen=scen, maps_folder=scen_folder, name="curtailment", size_scale=2, unit="TWh", title="Curtailment", year=2)
-if run_parameter.subscen == 0:
+for scen in scenarios: plotly_maps_bubbles(df=kpis[scen].curtailment.location, scen=scen, maps_folder=scen_folder, name="curtailment", size_scale=2, unit="TWh", title="Curtailment", year=2)
+if run_parameter.sensitivity_scen == 0:
     for scen in [2,3,4]: plotly_maps_bubbles(df=kpis[scen].CAP_E, year=2, scen=scen, maps_folder=scen_folder, name="electrolyser_location", size_scale=8, unit="GW", title="Electrolyser capacity", flexible_bubble_size = True,  zoom = 1.22 , hoffset = -4, voffset = -2, min_legend=0, max_legend=40)
 else:
     for scen in [3,4]: plotly_maps_bubbles(df=kpis[scen].CAP_E, year=2, scen=scen, maps_folder=scen_folder, name="electrolyser_location", size_scale=8, unit="GW", title="Electrolyser capacity", flexible_bubble_size = True,  zoom = 1.22 , hoffset = -4, voffset = -2)
-for scen in run_parameter.scen: plotly_maps_lines(P_flow=kpis[scen].line_loading.AC["avg"], P_flow_DC= kpis[scen].line_loading.DC["avg"], bus=kpis[scen].bus,  scen=scen, maps_folder=scen_folder)
-for scen in run_parameter.scen: plotly_maps_lines_hours(P_flow=kpis[scen].line_loading.AC["avg"], P_flow_DC= kpis[scen].line_loading.DC["avg"], bus=kpis[scen].bus, scen=scen, maps_folder=scen_folder, timesteps=run_parameter.timesteps)
-for scen in run_parameter.scen: plotly_maps_size_lines(P_flow=kpis[scen].line_loading.AC, P_flow_DC = kpis[scen].line_loading.DC, CAP_lines=kpis[scen].CAP_lines , bus=kpis[scen].bus, scen=scen, year=2,  maps_folder=scen_folder, zoom = 1.25, offset = -4)
-
+for scen in scenarios: plotly_maps_lines(P_flow=kpis[scen].line_loading.AC["avg"], P_flow_DC= kpis[scen].line_loading.DC["avg"], bus=kpis[scen].bus,  scen=scen, maps_folder=scen_folder)
+for scen in scenarios: plotly_maps_lines_hours(P_flow=kpis[scen].line_loading.AC["avg"], P_flow_DC= kpis[scen].line_loading.DC["avg"], bus=kpis[scen].bus, scen=scen, maps_folder=scen_folder, timesteps=run_parameter.timesteps)
+for scen in scenarios: plotly_maps_size_lines(P_flow=kpis[scen].line_loading.AC, P_flow_DC = kpis[scen].line_loading.DC, CAP_lines=kpis[scen].CAP_lines , bus=kpis[scen].bus, scen=scen, year=2,  maps_folder=scen_folder, zoom = 1.25, offset = -4)

@@ -1,8 +1,8 @@
-import pandas as pd
-import numpy as np
-import timeit
-import os
 import collections
+import os
+
+import numpy as np
+import pandas as pd
 from numba import jit, float32
 
 
@@ -40,24 +40,9 @@ def append_BHEH(string):
     #     return test
     if string == "line":
         return pd.DataFrame({"name": ["BHEH-DE","BHEH-DK2", "BHEH-SE", "BHEH-PL" ], "fbus": [509, 1583, 5497, 4952], "tbus": [6127,6127,6127, 6127], "rateA": [1000, 1000, 1000, 1000]})
-    #if string == "ntc":
-        #return pd.DataFrame({"BIDDING ZONES": ["DK2", "SE3", "DE", "PL"], "Unnamed: 1": ["BHEH", "BHEH", "BHEH", "BHEH"], "T>F": [300, 300, 300, 300], "F>T": [300, 300, 300, 300]})
 
-# def append_BHEH_CBN(string):
-#     if string == "country":
-#         return pd.DataFrame([{"COUNTRY": "Bornholm Energy Hub", "CODE": "BHEH", "ID": "34"}])
-#     if string == "bus":
-#         #folgt noch der alten nummerierung! ist richtig so!
-#         return pd.DataFrame([{"name":"BHEH", "bus_i": 6127, "baseKV": 400, "zone": 34, "LAT": 55.13615337829421, "LON": 14.898639089359104}])
-#     if string == "wind":
-#         return pd.DataFrame([{"index": 479, "country": 34, "zone": "BHEH", "bus": 6127, "Pmax": 3000}])
-#     # if string == "wind_ts":
-#     #     test = wind_ts_bh["electricity"]/15000
-#     #     return test
-#     if string == "line":
-#         return pd.DataFrame({"name": ["BHEH-DE","BHEH-DK2", "BHEH-SE", "BHEH-PL" ], "fbus": [509, 1583, 5497, 4952], "tbus": [6127,6127,6127,6127], "rateA": [1000, 1000, 1000, 1000]})
 def merge_timeseries_supply(supply, timeseries):
-    supply= supply.groupby("bus").sum().reset_index()
+    supply= supply.groupby("bus").sum(numeric_only = True).reset_index()
     timeseries_T = timeseries.T
     timeseries_T.index = timeseries_T.index.astype(int)
     bus_ts_matrix = supply[["bus"]].merge(timeseries_T, how="left", left_on="bus", right_index=True).drop(['bus'], axis=1).T
@@ -154,11 +139,11 @@ def distance_calc(lat1, lon1, lat2, lon2):
     c = 2 * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
     distance = R * c
     return distance #in km
-def distance_line(bus_overview, line_overview, indices):
+def distance_line(nodes, dc_line_overview, index):
     distance_dict={}
-    for i in indices:
-        entry = line_overview.loc[i]
-        distance = distance_calc_between_entries(bus_overview.loc[entry["from"]], bus_overview.loc[entry["to"]])
+    for i in index:
+        entry = dc_line_overview.loc[i]
+        distance = distance_calc_between_entries(entry_1=nodes.loc[entry["from"]], entry_2=nodes.loc[entry["to"]])
         distance_dict.update({i:distance})
     return distance_dict
 def distance_calc_between_entries(entry_1, entry_2):
@@ -253,110 +238,9 @@ def hoesch(lines,bus):
     for i in lines.index:
         k_il[i, lines[lines.index == i]["from"]] = 1
         k_il[i, lines[lines.index == i]["to"]] = -1
-    b_vector = np.array(1 / lines["x"])
-    b_lk = np.diag(b_vector)
+    #b_vector = np.array(1 / lines["x"])
+    #b_lk = np.diag(b_vector)
     return k_il#, b_lk
-
-
-
-def incedence_bobby(bus_raw, lines):
-
-    a_matrix = pd.DataFrame(np.zeros((len(bus_raw.index), (len(lines.index))), dtype=int), columns=lines.index,
-                            index=bus_raw.index, )  # dimensions: LxJ with nodes as index and lines as columns
-    for i in lines.index:
-        a_matrix[i][lines[lines.index == i]["from"]] = 1
-        a_matrix[i][lines[lines.index == i]["to"]] = -1
-    #incedence = a_matrix.transpose()
-    a_matrix2 = np.zeros((len(lines.index), len(bus_raw.index)), dtype=int)
-    for i in lines.index:
-        a_matrix2[i, lines[lines.index == i]["from"]] = 1
-        a_matrix2[i, lines[lines.index == i]["to"]] = -1
-    incedence = a_matrix2
-    #incedence = np.array([[1,0,-1],[1,-1,0],[0,1,-1]])
-    b_vector = np.array(1/lines["x"])
-    b_trans = np.vstack(b_vector)
-    #b_vector = np.array([1, 1, 1])
-    hmatrix = incedence*b_trans
-    bmatrix = hmatrix.T@incedence
-    return hmatrix, bmatrix
-
-def incedence_springer(bus_raw, lines, slack):
-    def create_B(lines, bus_raw):
-        fbus = lines["from"]
-        tbus = lines["to"]
-        lines_x = lines["x"]
-        ybus = pd.DataFrame(np.zeros((len(bus_raw), (len(bus_raw)))), columns=bus_raw.index,
-                            index=bus_raw.index)             #dimensions nodes*nodes
-        for i in lines.index:
-            ybus[fbus[i]][tbus[i]] = -1/lines_x[i]
-            ybus[tbus[i]][fbus[i]] = -1/lines_x[i]
-        rowsum_ybus = np.sum(ybus, axis=1)
-        for i in ybus.index:
-            ybus[i][i] = - rowsum_ybus[i]
-        return pd.DataFrame(ybus)
-    # PF = BaseMVA * b* A* theta = BaseMVA * b* A* B^-1*Pinj
-    reactance_vector= lines["x"]
-    b = np.diag(1/reactance_vector)         #dimensions: LxL Lines and lines
-    a_matrix = pd.DataFrame(np.zeros((len(bus_raw.index), (len(lines.index))), dtype=int), columns=lines.index,
-                            index=bus_raw.index, )  # dimensions: LxJ with nodes as index and lines as columns
-    for i in lines.index:
-        a_matrix[i][lines[lines.index == i]["from"]] = 1
-        a_matrix[i][lines[lines.index == i]["to"]] = -1
-    A = a_matrix.transpose()        # springer defines it the other way round
-    B = create_B(lines, bus_raw) #dimensions: JxJ nodes*nodes
-    B_inv = pd.DataFrame(np.linalg.pinv(B.values), B.index, B.index)
-    #test = B_inv.dot(B)
-
-def incedence_paul(bus_raw, lines, slack):
-    b = pd.DataFrame(np.diag(1/lines["x"]), columns = lines.index, index = lines.index)  # dimensions: LxL Lines and lines
-    a_matrix = pd.DataFrame(np.zeros((len(bus_raw.index), (len(lines.index))), dtype=int), columns=lines.index,
-                            index=bus_raw.index, )  # dimensions: LxJ with nodes as index and lines as columns
-    for i in lines.index:
-        a_matrix[i][lines[lines.index == i]["from"]] = 1
-        a_matrix[i][lines[lines.index == i]["to"]] = -1
-    A = a_matrix.transpose()
-    def create_B(lines, bus_raw):
-        fbus = lines["from"]
-        tbus = lines["to"]
-        lines_x = lines["x"]
-        ybus = pd.DataFrame(np.zeros((len(bus_raw), (len(bus_raw)))), columns=bus_raw.index,
-                            index=bus_raw.index)             #dimensions nodes*nodes
-        for i in lines.index:
-            ybus[fbus[i]][tbus[i]] = -1/lines_x[i]
-            ybus[tbus[i]][fbus[i]] = -1/lines_x[i]
-        rowsum_ybus = np.sum(ybus, axis=1)
-        for i in ybus.index:
-            ybus[i][i] = - rowsum_ybus[i]
-        return pd.DataFrame(ybus)
-
-    B = create_B(lines, bus_raw)# dimensions: JxJ nodes*nodes
-
-    B.loc[:,slack] = 0.0
-    B.loc[slack,:] = 0.0
-    B_inv = pd.DataFrame(np.linalg.pinv(B.values), B.index, B.index) #Dimension: bxb
-    #h_test = b@A
-
-    return b, A, B
-
-def incedence_ewMOD(bus_raw, lines_raw, slack):
-    #B = np.diag([1,1,1])
-    lines = lines_raw.reset_index(drop=True)
-    B = np.diag(1/lines["x"])  # dimensions: LxL Lines and lines
-    a_matrix = np.zeros((len(lines.index), len(bus_raw.index)), dtype=int)
-    for i in lines.index:
-        a_matrix[i, lines[lines.index == i]["from"]] = 1
-        a_matrix[i, lines[lines.index == i]["to"]] = -1
-    incedence = a_matrix
-    #pd.DataFrame(incedence).to_csv("incedence.csv", index = False)
-    Bl = B@incedence
-    Bn = (incedence.T@B)@incedence
-    Bn[:,slack] = 0.0
-    Bn[slack,:] = 0.0
-    B_inv = np.linalg.pinv(Bn)
-    PTDF = Bl @ B_inv
-    PTDF = pd.DataFrame(PTDF, index = lines_raw.index).to_dict()
-
-    return PTDF
 
 def ren_helper(n, renewables_list):
     if n in renewables_list:
@@ -653,7 +537,7 @@ def res_normalisation(self, df, type):
     # test_tyndp = self.tyndp_installed_capacity
     normalised = df.copy()
     if type == "wind":
-        grouped_pypsa = df.groupby(["bidding_zone", "type"]).sum()["max"]
+        grouped_pypsa = df.groupby(["bidding_zone", "type"]).sum(numeric_only = True)["max"]
         # again the grouping of the NOS0
         grouped_pypsa.loc["NO1", "offwind"] = grouped_pypsa.loc["NO1", "offwind"] + grouped_pypsa.loc["NO2", "offwind"] + grouped_pypsa.loc["NO5", "offwind"]
         grouped_pypsa.loc["NO1", "onwind"] = grouped_pypsa.loc["NO1", "onwind"] + grouped_pypsa.loc["NO2", "onwind"] + grouped_pypsa.loc["NO5", "onwind"]
@@ -674,7 +558,7 @@ def res_normalisation(self, df, type):
                         normalised.loc[(normalised["type"] == subtype) & (normalised["bidding_zone"] == zone), "max"] = 0.00001
                         # normalised = pd.concat([normalised, df[(df["type"] == subtype) & (df["bidding_zone"] == zone)] * normalisation_factor])
     if type == "solar":
-        grouped_pypsa = df.groupby(["bidding_zone"]).sum()["max"]
+        grouped_pypsa = df.groupby(["bidding_zone"]).sum(numeric_only = True)["max"]
         grouped_pypsa.loc["NO1"] = grouped_pypsa.loc["NO1"] + grouped_pypsa.loc["NO2"] + grouped_pypsa.loc["NO5"]
         grouped_pypsa.drop(["NO2", "NO5"], inplace=True)
         for zone in grouped_pypsa.index.unique():

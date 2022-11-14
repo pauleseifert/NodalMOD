@@ -1,25 +1,13 @@
 import pickle
 import timeit
 
-
-
-import gurobipy as gp
-import numpy as np
-import pandas as pd
-from gurobipy import GRB, Model
-
-from cyclefinding import cycles
-from helper_functions import ren_helper2, demand_helper2, create_encyclopedia
-
 import geopandas as gpd
 import gurobipy as gp
-import numpy as np
 import pandas as pd
 from gurobipy import GRB
+from gurobipy import Model
 
-from cyclefinding import cycles
-from helper_functions import ren_helper2, demand_helper2, create_encyclopedia, hoesch, distance_line
-
+from helper_functions import ren_helper2, demand_helper2, create_encyclopedia
 from import_data_object import model_data, run_parameter
 
 starttime = timeit.default_timer()
@@ -95,6 +83,10 @@ R = data.res_series[0].columns
 DAM = data.reservoir.index
 S = data.storage.index
 LDC = data.dc_lines.index
+C = range(len(L)-len(N)+1) #C_cl_df.index
+# separating the flexlines
+I = data.dc_lines[data.dc_lines["EI"].isin(["BHEH", "NSEH1", "NSEH2", "CLUSTER"])].index  # BHEI
+D = data.dc_lines[~data.dc_lines["EI"].isin(["BHEH", "NSEH1", "NSEH2", "CLUSTER"])].index # lines not to the EI's
 
 I = data.dc_lines[data.dc_lines["EI"].isin([0,1,2,3])].index  # BHEI
 D = data.dc_lines[~data.dc_lines["EI"].isin([0,1,2,3])].index # lines not to the EI's
@@ -155,7 +147,7 @@ res_curtailment = model.addVars(Y, T, R, lb=0.0, ub = GRB.INFINITY, name="res_cu
 cap_BH = model.addVars(Y, I, lb=0.0, ub = GRB.INFINITY, name = "cap_BH")
 #F_AC = model.addVars(Y, T, L, lb =-GRB.INFINITY, ub=GRB.INFINITY, name="F_AC")
 F_DC = model.addVars(Y, T, LDC, lb =-GRB.INFINITY,ub=GRB.INFINITY, name = "F_DC")
-p_load_lost = model.addVars(Y, T,zone, lb=0.0, ub = GRB.INFINITY, name = "p_load_lost")
+p_load_lost = model.addVars(Y, T, zone, lb=0.0, ub = GRB.INFINITY, name = "p_load_lost")
 #if run_parameter.scen != 1:
 #    cap_E = model.addVars(Y, E, lb=0.0, ub = GRB.INFINITY, name = "cap_E")
 #    P_H = model.addVars(Y, T, E, lb=0.0, ub=GRB.INFINITY, name="P_H")
