@@ -596,7 +596,6 @@ class model_data:
         nodes_other_bidding_zone["bidding_zone"] = nodes_other_bidding_zone["country"]
         self.nodes = pd.concat([nodes_scand_bidding_zones_resolved, nodes_other_bidding_zone]).drop(
             columns="geometry").sort_index()
-
     def extend_overloaded_lines(self, type, case_name):
         # {index, hours_with_overload_in_3_years}
         # base scenario, subscenario 3

@@ -17,13 +17,13 @@ run_parameter= run_parameter(scenario_name = "Offshore_Bidding_Zone_Scenario")
 run_parameter.create_scenarios()
 
 data = model_data(create_res = False,reduced_ts = True, export_files= True, run_parameter = run_parameter)
-df_nodes = data.nodes
-gdf_nodes = gpd.df_nodes(df_nodes, geometry=gpd.points_from_xy(df_nodes.LON, df_nodes.LAT), crs="EPSG:4326")
-#TODO: error module 'geopandas' has no attribute 'df_nodes'? Warum?
+data.nodes.to_csv("data.nodes.csv",sheet_name='data.nodes')
+#TODO:
 
 #zones festlegen, als set und zuordnung zu den nodes
 shapes = gpd.read_file('data/shapes/NUTS_RG_10M_2021_4326.geojson')
-shapes_filtered = shapes.query("LEVL_CODE ==1 and CNTR_CODE == 'DE'")
+shapes_filtered = shapes.query("LEVL_CODE ==1")
+#shapes_filtered = shapes.query("LEVL_CODE ==1 and CNTR_CODE == 'DE'")
 #shape from the nodes longitude and latitude a geometry to sjoin them
 df_buses = pd.read_csv("data/PyPSA_elec1024/buses.csv", index_col=0)
 #df_buses['geometry'] = [Point(xy) for xy in zip(df_buses.x, df_buses.y)]
