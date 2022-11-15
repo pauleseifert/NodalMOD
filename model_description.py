@@ -24,32 +24,25 @@ gdf_nodes = gpd.data.nodes(data.nodes, geometry=gpd.points_from_xy(data.nodes.LO
 #zones festlegen, als set und zuordnung zu den nodes
 shapes = gpd.read_file('data/shapes/NUTS_RG_10M_2021_4326.geojson')
 shapes_filtered = shapes.query("LEVL_CODE ==1 and CNTR_CODE == 'DE'")
-shapes_filtered.plot()
 
 df_buses = pd.read_csv("data/PyPSA_elec1024/buses.csv", index_col=0)
-#df_buses['geometry'] = [Point(xy) for xy in zip(df_buses.x, df_buses.y)]
 gdf_buses = gpd.GeoDataFrame(df_buses, geometry=gpd.points_from_xy(df_buses.x, df_buses.y), crs="EPSG:4326")
-#df_buses_selected = ['name', 'geometry']
-df_buses.head()
-# coordinate systems are correct?
-#df_buses_selected.crs == shapes_filtered.crs
+
+
 #Spatial Join
-#sjoined_nodes_states = gpd.sjoin(df_buses["geometry"],shapes_filtered, op="within")
 sjoined_nodes_states = gdf_buses.sjoin(shapes_filtered[["NUTS_NAME","NUTS_ID","geometry"]], how ="left")
 
-#How many nodes are in each state bzw zone "state_Bayern" = "NUTS_ID":"DE2"
 # First grouping based on "NUTS_ID" - Within each team we are grouping based on "Position"
-df_nodes_Bayern = sjoined_nodes_states.groupby("NUTS_ID").count()
-#ToDo
+
+
 #größte Aufteilung der Zonen festlegen
 
 #Filtern der Columns die wir brauchen für Zones DE
 df_zones_DE = sjoined_nodes_states.query("country == 'DE'")
 df_zones_DE_filtered = df_zones_DE.filter(['NUTS_NAME', 'country', 'NUTS_ID', 'geometry'])
-#How many nodes are in each state bzw zone "state_Bayern" = "NUTS_ID":"DE2"?
-df_zones_DE_filtered.groupby("NUTS_NAME == 'Bayern'").count()
 
-#df.columns = ["NUTS_ID", ‘listings_count’]
+
+
 
 #zone = ["DE1","DE2", "DE3", "DE4", "NO1", "NO2", "NO3", "DK1", "DK2", "BALTIC", "NORTH"]
 
@@ -144,6 +137,7 @@ res_curtailment = model.addVars(Y, T, R, lb=0.0, ub = GRB.INFINITY, name="res_cu
 cap_BH = model.addVars(Y, I, lb=0.0, ub = GRB.INFINITY, name = "cap_BH")
 #F_AC = model.addVars(Y, T, L, lb =-GRB.INFINITY, ub=GRB.INFINITY, name="F_AC")
 F_DC = model.addVars(Y, T, LDC, lb =-GRB.INFINITY,ub=GRB.INFINITY, name = "F_DC")
+#Todo Damit es ab hier läuft müssen die Zones definiert sein
 p_load_lost = model.addVars(Y, T, zone, lb=0.0, ub = GRB.INFINITY, name = "p_load_lost")
 #if run_parameter.scen != 1:
 #    cap_E = model.addVars(Y, E, lb=0.0, ub = GRB.INFINITY, name = "cap_E")
