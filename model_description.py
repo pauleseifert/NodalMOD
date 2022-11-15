@@ -17,6 +17,8 @@ run_parameter= run_parameter(scenario_name = "Offshore_Bidding_Zone_Scenario")
 run_parameter.create_scenarios()
 
 data = model_data(create_res = False,reduced_ts = True, export_files= True, run_parameter = run_parameter)
+data.nodes.head()
+gdf_nodes = gpd.data.nodes(data.nodes, geometry=gpd.points_from_xy(data.nodes.LON, data.nodes.LAT), crs="EPSG:4326")
 
 
 #zones festlegen, als set und zuordnung zu den nodes
