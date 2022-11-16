@@ -17,7 +17,8 @@ run_parameter= run_parameter(scenario_name = "Offshore_Bidding_Zone_Scenario")
 run_parameter.create_scenarios()
 
 data = model_data(create_res = False,reduced_ts = True, export_files= True, run_parameter = run_parameter)
-data.nodes.to_csv("data.nodes.csv",sheet_name='data.nodes')
+dc_lines.to_excel('dc_lines.xlsx')
+df_data_nodes = pd.read_excel("data/shapes/data.nodes.xlsx")
 #TODO:
 
 #zones festlegen, als set und zuordnung zu den nodes
