@@ -60,9 +60,6 @@ df_zones_DE_filtered.groupby("NUTS_NAME == 'Bayern'").count()
 #    countries = network.buses.country.unique()
 #    countries = (list(set(countries)-set(c_cap)))
 
-#ToDo: create zones
-#ToDo:sum NTCs an den borders
-
 # Create a new model
 model: Model = gp.Model("Offshore_Bidding_Zones")
 
