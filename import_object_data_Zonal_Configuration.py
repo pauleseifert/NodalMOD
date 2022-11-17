@@ -108,16 +108,22 @@ class model_data:
         self.ntc_BZ_3 = pd.read_csv("data\import_data\NTC\NTC_BZ_3.csv", sep=";", index_col=0)
         self.ntc_BZ_5 = pd.read_csv("data\import_data\NTC\NTC_BZ_5.csv", sep=";", index_col=0)
 
-        #reading in generation:
+        #reading in generation (erst mergen mit den BZ Scenarios und den NUTS)
+        #TODO: haben wir doppelte generation von offshore wind drin? müssen wir den DF filtern? Mergen mit den BZ Scenarios anhand der Nodes Index?
+        self.generators = pd.read_csv("data\import_data\generators_filtered.csv", sep=";", index_col=0)
+        #auf Basis der Zones:
+        #conventionals
+        conventionals_raw = pd.read_csv("data\import_data\conventionals_filtered.csv", sep=";", index_col=0)
+
+        #auf Basis der Nodes:
+        #solar_filtered
+        solar_raw = pd.read_csv("data\import_data\solar_filtered.csv", sep=";", index_col=0)
+        #wind_filtered
+        wind_raw = pd.read_csv("data\import_data\wind_filtered.csv", sep=";", index_col=0)
 
         #Funktion zum groupen und aufsummeiren der generations and fuels
         #test = sjoined_nodes_states4.groupby(["NUTS_ID","Fuel"]).sum(numeric_only=True)[["bidding_zone"]]
 
-        generators_raw = pd.read_csv(run_parameter.import_folder + "PyPSA_elec1024/generators.csv", index_col=0)
-        lines_raw = pd.read_csv(run_parameter.import_folder + "PyPSA_elec1024/lines.csv", index_col=0)
-        links_raw = pd.read_csv(run_parameter.import_folder + "PyPSA_elec1024/links.csv", index_col=0)
-        load_raw = pd.read_csv(run_parameter.import_folder + "PyPSA_elec1024/load.csv",index_col=0).reset_index(drop=True)
-        ror_ts = pd.read_csv(run_parameter.import_folder + "PyPSA_elec1024/hydro_ror_ts.csv", low_memory=False)
-        dam_maxsum_ts = pd.read_csv(run_parameter.import_folder + "PyPSA_elec1024/hydro_dam_ts.csv",low_memory=False)
-        hydro_database = pd.read_csv(run_parameter.import_folder + "jrc-hydro-power-plant-database.csv")
+        #demand einlesen mit tyndp_load?
+
 

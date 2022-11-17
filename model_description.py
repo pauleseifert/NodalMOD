@@ -17,13 +17,13 @@ run_parameter= run_parameter(scenario_name = "Offshore_Bidding_Zone_Scenario")
 run_parameter.create_scenarios()
 
 data = model_data(create_res = False,reduced_ts = True, export_files= True, run_parameter = run_parameter)
-dc_lines.to_excel('dc_lines.xlsx')
-df_data_nodes = pd.read_excel("data/shapes/data.nodes.xlsx")
+
 #TODO: aufbau und structure mit paul duchgehen (runparameter funktionen und scen)
 #TODO: einlesen der nodes to zones mit unterschiedlichen scenarien
 #TODO: NTCs vervollständigen zu den verschiedenen Scen reinladen (missing points und DC lines)
-#TODO: welche Daten fehlen? im Overleaf den Data Teil schreiben
-
+#TODO: welche Daten fehlen? im Overleaf den Data Teil schreiben (structure)
+#TODO: diskutieren ob es wirklich nötig ist die Nordics mit in das Model mit aufzunhemen (Paul meinte wegen Wasser Zeugs)
+#TODO: Recherche Flexilines - was für Caps für die NTCs nehmen wir?
 
 #zones festlegen, als set und zuordnung zu den nodes
 shapes = gpd.read_file('data/shapes/NUTS_RG_10M_2021_4326.geojson')
