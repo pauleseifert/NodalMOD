@@ -19,7 +19,11 @@ run_parameter.create_scenarios()
 data = model_data(create_res = False,reduced_ts = True, export_files= True, run_parameter = run_parameter)
 dc_lines.to_excel('dc_lines.xlsx')
 df_data_nodes = pd.read_excel("data/shapes/data.nodes.xlsx")
-#TODO:
+#TODO: aufbau und structure mit paul duchgehen (runparameter funktionen und scen)
+#TODO: einlesen der nodes to zones mit unterschiedlichen scenarien
+#TODO: NTCs vervollständigen zu den verschiedenen Scen reinladen (missing points und DC lines)
+#TODO: welche Daten fehlen? im Overleaf den Data Teil schreiben
+
 
 #zones festlegen, als set und zuordnung zu den nodes
 shapes = gpd.read_file('data/shapes/NUTS_RG_10M_2021_4326.geojson')

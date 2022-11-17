@@ -632,7 +632,7 @@ class model_data:
         windfarms = windfarms.rename(columns={"Latitude (decimal units)": "LAT", "Longitude (decimal units)": "LON"})
         windfarms = windfarms.reset_index(drop=True)
         windfarms[0] = 1000
-        print = False
+        print = True
 
         if print: plotly_maps_bubbles(df=windfarms, scen=9, maps_folder=location + "kini_locations",
                                       name="future_windfarms_locations_all", unit="GW", size_scale=100,

@@ -167,8 +167,8 @@ def plotly_maps_bubbles(df, scen, maps_folder, name, year, unit, size_scale, tit
         font = dict(size=30)
     )
     #fig.show()
-    #fig.write_html(maps_folder + str(scen) + "_"+name+".html")
-    fig.write_image(maps_folder + "scen_"+str(scen) +"_year_"+str(year) + "_"+name+".pdf", width=2000, height=1600)
+    fig.write_html(maps_folder + str(scen) + "_"+name+".html")
+    #fig.write_image(maps_folder + "scen_"+str(scen) +"_year_"+str(year) + "_"+name+".pdf", width=2000, height=1600)
 def plotly_maps_lines(P_flow, P_flow_DC,bus, scen, maps_folder):
     colors = list(Color("green").range_to(Color("red"), 8))
     limits = [(0, 10), (10, 20), (20, 30), (30, 40), (40, 50), (50, 60), (60, 70), (70, 75)]

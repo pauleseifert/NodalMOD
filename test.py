@@ -35,7 +35,9 @@ sjoined_nodes_states3.to_csv("data_nodes_to_zones.csv")
 #Merge Pauls (old_index) and Pypsa dataframes (name) to one df_nodes_to_zones_merge
 #sjoined_nodes_states4 = sjoined_nodes_states3.rename(columns = {'name':'old_index'}, inplace = True)
 sjoined_nodes_states4 = sjoined_nodes_states3.reset_index()
-sjoined_nodes_states4.plt()
+#sjoined_nodes_states4.plt()
+test = sjoined_nodes_states4.groupby(["NUTS_ID","Fuel"]).sum(numeric_only=True)[["bidding_zone"]]
+
 #nodes_geopandas2 = n.rename(columns = {'old_index':'name'}, inplace = True)
 #use Pauls Index for the nodes to find missing vaules?
 df_nodes_to_zones_merge = pd.merge(sjoined_nodes_states4, nodes_geopandas, on='name')
@@ -48,3 +50,13 @@ test = df_nodes_to_zones_filtered.groupby(['country_y', 'NUTS_NAME']).groups
 print(df_nodes_to_zones_filtered.groupby('NUTS_ID').filter())
 #test2 = df_nodes_to_zones_filtered.groupby('month')[['duration']].sum()
 
+lookup_dict={"DEF":"DEX1", "DE6":"DEX1", .. ., "DEA":"DEX4"...}
+lookup_dict2 = {"DEF":"DEX1", "DE6":"DEX1"}
+def lookup(row):
+    try:
+        value = lookup_dict2[row["NUTS_ID"]]
+    except:
+        value = row["country"]
+    return value
+
+sjoined_nodes_states4['BZ_2'] = sjoined_nodes_states4.apply(lambda row: lookup(row), axis=1)
