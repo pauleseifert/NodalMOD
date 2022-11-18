@@ -81,11 +81,8 @@ class model_data:
     def __init__(self, create_res, reduced_ts, export_files, run_parameter):
         self.CO2_price = run_parameter.CO2_price
         # reading in nodes and merging them into zonal configuration BZ2, BZ3; BZ4
-        #TODO: durchlaufen lassen ohne das man es einzeln machen muss?
         #df_nodes = pd.read_csv(run_parameter.import_folder + "import_data/df_nodes_to_zones_filtered_final.csv",sep=";", index_col=0)
         df_nodes = pd.read_csv("data/import_data/df_nodes_to_zones_filtered_final.csv", sep=";", index_col=0)
-
-
 
         def lookup(row,scen_dict):
             try:
@@ -101,20 +98,27 @@ class model_data:
 
         #reading in NTCs
         #TODO: flexilines brauchen eine capacity zuweisung - Recherche? Offshore windfarms = Kinis Daten, BHEH =3000, NSEH1+2 = jeweils 10000
-        self.ntc_BZ_2 = pd.read_csv("data\\import_data\\NTC\\NTC_BZ_2.csv", sep=";", index_col=0)
-        self.ntc_BZ_3 = pd.read_csv("data\\import_data\\NTC\\NTC_BZ_3.csv", sep=";", index_col=0)
-        self.ntc_BZ_5 = pd.read_csv("data\\import_data\\NTC\\NTC_BZ_5.csv", sep=";", index_col=0)
+        self.ntc_BZ_2 = pd.read_csv("data\\import_data\\NTC\\NTC_BZ_2.csv", sep=";")
+        self.ntc_BZ_3 = pd.read_csv("data\\import_data\\NTC\\NTC_BZ_3.csv", sep=";")
+        self.ntc_BZ_5 = pd.read_csv("data\\import_data\\NTC\\NTC_BZ_5.csv", sep=";")
 
         #reading in generation (erst mergen mit den BZ Scenarios und den NUTS)
         #TODO: haben wir doppelte generation von offshore wind drin? müssen wir den DF filtern? Mergen mit den BZ Scenarios anhand der Nodes Index?
-        self.generators = pd.read_csv("data\import_data\generators_filtered.csv", sep=";", index_col=0)
-        df_generators = pd.read_csv("data\import_data\generators_filtered.csv", sep=",")
+        #TODO: überall wo df steht self austauschen
+        #generators = pd.read_csv("data\import_data\generators_filtered.csv", sep=";", index_col=0)
+        df_generators = pd.read_csv("data\\import_data\\generators_filtered.csv", sep=",")
         #mergen der nodes der OffBZ in den generator df
-        #if index = index merge
-        df_generators_merged = df_generators.merge(df_nodes, on="index",suffixes=('_left', '_right'))
-        #else ... add
+        df_generators_merged = df_nodes.merge(df_generators[['index', 'p_nom', 'carrier', 'marginal_cost', 'efficiency']], on="index",how='left')
+        self.generators = df_generators_merged
+        #die OffBZ (also fie carrier offshore) ausgliedern und OffBZ hinzufügen? Sollten wir das tun?
+        #TODO: die restlichen OffBZ mit carrier und marginal costs eintragen
+            #filter = offwind_ac, offwind_dc und nan
+            options_offwind = ['offwind-ac', 'offwind-dc', '']
+            # selecting rows based on condition
+            df_offwind = df_generators_merged.loc[df_generators_merged['carrier'].isin(options_offwind)]
         #merged_df = df1.merge(df2, on="Name",suffixes=('_left', '_right'))
         #auf Basis der Zones:
+
         #conventionals
         conventionals_raw = pd.read_csv("data\import_data\conventionals_filtered.csv", sep=";", index_col=0)
 
@@ -127,6 +131,7 @@ class model_data:
         #Funktion zum groupen und aufsummeiren der generations and fuels
         #test = sjoined_nodes_states4.groupby(["NUTS_ID","Fuel"]).sum(numeric_only=True)[["bidding_zone"]]
 
-        #demand einlesen mit tyndp_load?
+        #demand einlesen mit tyndp_load! Auf basis der BZ
+        #tiemseries einlesen für wind und solar! mir ninja.renewables
 
 
