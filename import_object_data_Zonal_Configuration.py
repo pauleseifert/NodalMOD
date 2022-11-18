@@ -30,14 +30,12 @@ class run_parameter:
             self.sensitivity_scen = int(sys.argv[5])
         # local execution parameters
         elif (platform == "darwin") or (platform == "win32"):
-            self.directory = "\Users\Dell\Documents\GitHub\MulCarNI" #directory anpassen
+            self.directory = "" #directory anpassen
             self.case_name = scenario_name
             self.years = 1
             self.timesteps = 10
-            self.scen = 1
+            self.scen = "BZ2"
             self.sensitivity_scen = 0
-            self.scen = 1  # hier szenario 5 erstellen für zonen
-            self.sensitivit_scen = 0
         self.solving = False
         self.reduced_TS = False
         self.export_model_formulation = self.directory + "results/" + self.case_name + "/model_formulation_scen" + str(
@@ -53,11 +51,21 @@ class run_parameter:
     # je nachdem was oben bei scen eingetragen ist wird hier der case betrachtet
     def create_scenarios(self):
         match self.scen:
-            case 1:
-                self.electrolyser = []
-                print("BASE case")
-            #case 2:
-
+            case "BZ2":
+                self.lookup_dict = {"DEF": "DEII1", "DE6": "DEII1", "DE9": "DEII1", "DE3": "DEII1", "DE4": "DEII1",
+                          "DE8": "DEII1", "DED": "DEII1", "DEE": "DEII1", "DEG": "DEII1", "DEA": "DEII2",
+                          "DEB": "DEII2", "DEC": "DEII2", "DE1": "DEII2", "DE2": "DEII2", "DE7": "DEII2",
+                          "OffBZN": "OffBZN", "OffBZB": "OffBZB"}
+            case "BZ3":
+                self.lookup_dict = {"DEF": "DEII1", "DE6": "DEII1", "DE9": "DEII1", "DE3": "DEII2", "DE4": "DEII2",
+                                  "DE8": "DEII2", "DED": "DEII2", "DEE": "DEII2", "DEG": "DEII2", "DEA": "DEII3",
+                                  "DEB": "DEII3", "DEC": "DEII3", "DE1": "DEII3", "DE2": "DEII3", "DE7": "DEII3",
+                                  "OffBZN": "OffBZN", "OffBZB": "OffBZB"}
+            case "BZ5":
+                self.lookup_dict = {"DEF": "DEII1", "DE6": "DEII2", "DE9": "DEII2", "DE3": "DEII3", "DE4": "DEII3",
+                                  "DE8": "DEII3", "DED": "DEII3", "DEE": "DEII3", "DEG": "DEII3", "DEA": "DEII4",
+                                  "DEB": "DEII4", "DEC": "DEII4", "DE1": "DEII5", "DE2": "DEII5", "DE7": "DEII5",
+                                  "OffBZN": "OffBZN", "OffBZB": "OffBZB"}
         match self.sensitivity_scen:
             case 0:
                 print("Base scenario sensitivity")
@@ -75,39 +83,27 @@ class model_data:
         # reading in nodes and merging them into zonal configuration BZ2, BZ3; BZ4
         #TODO: durchlaufen lassen ohne das man es einzeln machen muss?
         #df_nodes = pd.read_csv(run_parameter.import_folder + "import_data/df_nodes_to_zones_filtered_final.csv",sep=";", index_col=0)
-        #df_nodes = pd.read_csv("data/import_data/df_nodes_to_zones_filtered_final.csv", sep=";", index_col=0)
+        df_nodes = pd.read_csv("data/import_data/df_nodes_to_zones_filtered_final.csv", sep=";", index_col=0)
 
-        lookup_dictBZ2 = {"DEF": "DEII1", "DE6": "DEII1", "DE9": "DEII1", "DE3": "DEII1", "DE4": "DEII1",
-                          "DE8": "DEII1", "DED": "DEII1", "DEE": "DEII1", "DEG": "DEII1", "DEA": "DEII2",
-                          "DEB": "DEII2", "DEC": "DEII2", "DE1": "DEII2", "DE2": "DEII2", "DE7": "DEII2",
-                          "OffBZN": "OffBZN", "OffBZB": "OffBZB"}
-        lookup_dictBZ3 = {"DEF": "DEII1", "DE6": "DEII1", "DE9": "DEII1", "DE3": "DEII2", "DE4": "DEII2",
-                          "DE8": "DEII2", "DED": "DEII2", "DEE": "DEII2", "DEG": "DEII2", "DEA": "DEII3",
-                          "DEB": "DEII3", "DEC": "DEII3", "DE1": "DEII3", "DE2": "DEII3", "DE7": "DEII3",
-                          "OffBZN": "OffBZN", "OffBZB": "OffBZB"}
-        lookup_dictBZ5 = {"DEF": "DEII1", "DE6": "DEII2", "DE9": "DEII2", "DE3": "DEII3", "DE4": "DEII3",
-                          "DE8": "DEII3", "DED": "DEII3", "DEE": "DEII3", "DEG": "DEII3", "DEA": "DEII4",
-                          "DEB": "DEII4", "DEC": "DEII4", "DE1": "DEII5", "DE2": "DEII5", "DE7": "DEII5",
-                          "OffBZN": "OffBZN", "OffBZB": "OffBZB"}
 
-        def lookup(row):
+
+        def lookup(row,scen_dict):
             try:
-                value = lookup_dictBZ5[row["NUTS_ID"]]
+                value = scen_dict[row["NUTS_ID"]]
             except:
                 value = row["country_y"]
             return value
 
-        df_nodes['BZ_2'] = df_nodes.apply(lambda row: lookup(row), axis=1)
-        df_nodes['BZ_3'] = df_nodes.apply(lambda row: lookup(row), axis=1)
-        df_nodes['BZ_5'] = df_nodes.apply(lambda row: lookup(row), axis=1)
-        self.\
-        df_nodes = pd.read_csv("data/import_data/df_nodes.csv", sep=",", index_col=0)
+        df_nodes[run_parameter.scen] = df_nodes.apply(lambda row: lookup(row, run_parameter.lookup_dict), axis=1)
+        self.nodes = df_nodes
+
+        #self.df_nodes = pd.read_csv("data/import_data/df_nodes.csv", sep=",", index_col=0)
 
         #reading in NTCs
         #TODO: flexilines brauchen eine capacity zuweisung - Recherche? Offshore windfarms = Kinis Daten, BHEH =3000, NSEH1+2 = jeweils 10000
-        self.ntc_BZ_2 = pd.read_csv("data\import_data\NTC\NTC_BZ_2.csv", sep=";", index_col=0)
-        self.ntc_BZ_3 = pd.read_csv("data\import_data\NTC\NTC_BZ_3.csv", sep=";", index_col=0)
-        self.ntc_BZ_5 = pd.read_csv("data\import_data\NTC\NTC_BZ_5.csv", sep=";", index_col=0)
+        self.ntc_BZ_2 = pd.read_csv("data\\import_data\\NTC\\NTC_BZ_2.csv", sep=";", index_col=0)
+        self.ntc_BZ_3 = pd.read_csv("data\\import_data\\NTC\\NTC_BZ_3.csv", sep=";", index_col=0)
+        self.ntc_BZ_5 = pd.read_csv("data\\import_data\\NTC\\NTC_BZ_5.csv", sep=";", index_col=0)
 
         #reading in generation (erst mergen mit den BZ Scenarios und den NUTS)
         #TODO: haben wir doppelte generation von offshore wind drin? müssen wir den DF filtern? Mergen mit den BZ Scenarios anhand der Nodes Index?

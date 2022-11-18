@@ -8,7 +8,7 @@ from gurobipy import Model
 
 
 from helper_functions import ren_helper2, demand_helper2, create_encyclopedia
-from import_data_object import model_data, run_parameter
+from import_object_data_Zonal_Configuration import model_data, run_parameter
 
 starttime = timeit.default_timer()
 
