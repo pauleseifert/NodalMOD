@@ -20,7 +20,6 @@ data = model_data(create_res = False,reduced_ts = True, export_files= True, run_
 
 #TODO: aufbau und structure mit paul duchgehen (runparameter funktionen und scen)
 #TODO: einlesen der nodes to zones mit unterschiedlichen scenarien
-#TODO: NTCs vervollständigen zu den verschiedenen Scen reinladen (missing points und DC lines)
 #TODO: welche Daten fehlen? im Overleaf den Data Teil schreiben (structure)
 #TODO: diskutieren ob es wirklich nötig ist die Nordics mit in das Model mit aufzunhemen (Paul meinte wegen Wasser Zeugs)
 #TODO: Recherche Flexilines - was für Caps für die NTCs nehmen wir?
@@ -43,7 +42,7 @@ df_zones_DE = sjoined_nodes_states.query("country == 'DE'")
 df_zones_DE_filtered = df_zones_DE.filter(['NUTS_NAME', 'country', 'NUTS_ID', 'geometry'])
 
 #How many nodes are in each state bzw zone "state_Bayern" = "NUTS_ID":"DE2"?
-df_zones_DE_filtered.groupby("NUTS_NAME == 'Bayern'").count()
+#df_zones_DE_filtered.groupby("NUTS_NAME == 'Bayern'").count()
 
 #df.columns = ["NUTS_ID", ‘listings_count’]
 

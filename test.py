@@ -68,3 +68,5 @@ df_nodes['BZ_3'] = df_nodes.apply(lambda row: lookup(row), axis=1)
 df_nodes['BZ_5'] = df_nodes.apply(lambda row: lookup(row), axis=1)
 df_nodes_to_zones = df_nodes
 df_nodes.to_csv('df_nodes.csv')
+
+#generators mergen mit den

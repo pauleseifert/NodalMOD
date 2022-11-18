@@ -100,7 +100,8 @@ class model_data:
         df_nodes['BZ_2'] = df_nodes.apply(lambda row: lookup(row), axis=1)
         df_nodes['BZ_3'] = df_nodes.apply(lambda row: lookup(row), axis=1)
         df_nodes['BZ_5'] = df_nodes.apply(lambda row: lookup(row), axis=1)
-        self.nodes = pd.read_csv("data/import_data/df_nodes.csv", sep=";", index_col=0)
+        self.\
+        df_nodes = pd.read_csv("data/import_data/df_nodes.csv", sep=",", index_col=0)
 
         #reading in NTCs
         #TODO: flexilines brauchen eine capacity zuweisung - Recherche? Offshore windfarms = Kinis Daten, BHEH =3000, NSEH1+2 = jeweils 10000
@@ -111,6 +112,12 @@ class model_data:
         #reading in generation (erst mergen mit den BZ Scenarios und den NUTS)
         #TODO: haben wir doppelte generation von offshore wind drin? müssen wir den DF filtern? Mergen mit den BZ Scenarios anhand der Nodes Index?
         self.generators = pd.read_csv("data\import_data\generators_filtered.csv", sep=";", index_col=0)
+        df_generators = pd.read_csv("data\import_data\generators_filtered.csv", sep=",")
+        #mergen der nodes der OffBZ in den generator df
+        #if index = index merge
+        df_generators_merged = df_generators.merge(df_nodes, on="index",suffixes=('_left', '_right'))
+        #else ... add
+        #merged_df = df1.merge(df2, on="Name",suffixes=('_left', '_right'))
         #auf Basis der Zones:
         #conventionals
         conventionals_raw = pd.read_csv("data\import_data\conventionals_filtered.csv", sep=";", index_col=0)
