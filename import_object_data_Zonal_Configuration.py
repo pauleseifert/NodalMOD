@@ -104,45 +104,29 @@ class model_data:
 
         #reading in generation (erst mergen mit den BZ Scenarios und den NUTS)
         #TODO: haben wir doppelte generation von offshore wind drin? müssen wir den DF filtern? Mergen mit den BZ Scenarios anhand der Nodes Index?
-        #TODO: überall wo df steht self austauschen?
+        #TODO: überall wo df steht self austauschen
         #generators = pd.read_csv("data\import_data\generators_filtered.csv", sep=";", index_col=0)
-        df_generators = pd.read_csv("data\\import_data\\generators_filtered.csv", sep=";", index_col=0)
+        df_generators = pd.read_csv("data\\import_data\\generators_filtered.csv", sep=",")
         #mergen der nodes der OffBZ in den generator df
         df_generators_merged = df_nodes.merge(df_generators[['index', 'p_nom', 'carrier', 'marginal_cost', 'efficiency']], on="index",how='left')
-        #df_generators_merged.to_csv('generators_merged.csv', index=False)
         self.generators = df_generators_merged
-        #TODO: die OffBZ (also fie carrier offshore) ausgliedern und OffBZ hinzufügen? Sollten wir das tun?
+        #die OffBZ (also fie carrier offshore) ausgliedern und OffBZ hinzufügen? Sollten wir das tun?
         #TODO: die restlichen OffBZ mit carrier und marginal costs eintragen
             #filter = offwind_ac, offwind_dc und nan
-            #options_offwind = ['offwind-ac', 'offwind-dc', '']
+            options_offwind = ['offwind-ac', 'offwind-dc', '']
             # selecting rows based on condition
-            #df_offwind = df_generators_merged.loc[df_generators_merged['carrier'].isin(options_offwind)]
+            df_offwind = df_generators_merged.loc[df_generators_merged['carrier'].isin(options_offwind)]
         #merged_df = df1.merge(df2, on="Name",suffixes=('_left', '_right'))
-
         #auf Basis der Zones:
-        # 1) conventionals
-        #TODO: Komma Fehler beim einlesen in der Excel
-            #conventionals_raw = pd.read_csv("data\\import_data\\conventionals_filtered.csv", sep=";", index_col=0)
-            conventionals_filtered = df_generators_merged[df_generators_merged["carrier"].isin(["CCGT", "OCGT", "nuclear", "biomass", "coal", "lignite", "oil"])]
-            #kann nicht weiter gefiltered werden, weil es dann probleme bei den versch. Scen gibt mit "BZ2"
-            #conventionals = conventionals_filtered[
-                #["p_nom", "carrier", "marginal_cost", "efficiency", "co2_fac", "index", "bidding_zone"]].reset_index(
-                #drop=True)
-            #conventionals.columns = ["P_inst", "type", "mc", "efficiency", "co2_fac", "bus", "bidding_zone"]
-            self.conventionals = conventionals_filtered
 
-        # TODO: Aufsummieren der Convetionals nach BZ und Fuel Type und Capacities
-        #Funktion zum groupen und aufsummeiren der generations and fuels
-        #test = sjoined_nodes_states4.groupby(["NUTS_ID","Fuel"]).sum(numeric_only=True)[["bidding_zone"]]
+        #conventionals
+        conventionals_raw = pd.read_csv("data\import_data\conventionals_filtered.csv", sep=";", index_col=0)
+
         #auf Basis der Nodes:
-        # 2) solar_filtered
-        #solar_raw = pd.read_csv("data\\import_data\\solar_filtered.csv", sep=";", index_col=0)
-        solar_generation = df_generators_merged[df_generators_merged["carrier"].isin(["solar"])]
-            self.solar = solar_generation
-        # 3) wind_filtered
-        #wind_raw = pd.read_csv("data\\import_data\\wind_filtered.csv", sep=";", index_col=0)
-        wind_generation = df_generators_merged[df_generators_merged["carrier"].isin(["onwind", "offwind-ac", "offwind-dc"])]
-            self.wind = wind_generation
+        #solar_filtered
+        solar_raw = pd.read_csv("data\import_data\solar_filtered.csv", sep=";", index_col=0)
+        #wind_filtered
+        wind_raw = pd.read_csv("data\import_data\wind_filtered.csv", sep=";", index_col=0)
 
         #Funktion zum groupen und aufsummeiren der generations and fuels
         #test = sjoined_nodes_states4.groupby(["NUTS_ID","Fuel"]).sum(numeric_only=True)[["bidding_zone"]]
