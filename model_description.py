@@ -16,12 +16,19 @@ run_parameter= run_parameter(scenario_name = "Offshore_Bidding_Zone_Scenario")
 run_parameter.create_scenarios()
 data = model_data(create_res = False,reduced_ts = True, export_files= True, run_parameter = run_parameter)
 
+data.nodes.to_csv("data.nodes.csv",sheet_name='data.nodes')
+#TODO:
+
+
 #zones festlegen, als set und zuordnung zu den nodes
 shapes = gpd.read_file('data/shapes/NUTS_RG_10M_2021_4326.geojson')
-shapes_filtered = shapes.query("LEVL_CODE ==1 and CNTR_CODE == 'DE'")
-
+shapes_filtered = shapes.query("LEVL_CODE ==1")
+#shapes_filtered = shapes.query("LEVL_CODE ==1 and CNTR_CODE == 'DE'")
+#shape from the nodes longitude and latitude a geometry to sjoin them
 df_buses = pd.read_csv("data/PyPSA_elec1024/buses.csv", index_col=0)
+#df_buses['geometry'] = [Point(xy) for xy in zip(df_buses.x, df_buses.y)]
 gdf_buses = gpd.GeoDataFrame(df_buses, geometry=gpd.points_from_xy(df_buses.x, df_buses.y), crs="EPSG:4326")
+
 
 #case 1=1 Zone, 2=2 zones, 3= 3 zones, 4 = 5 zones
 bidding_zone_configuration = 1
@@ -88,20 +95,27 @@ del df_demand3['Demand_MW']
 print(df_demand3)
 
 #Berechnung der gesamten Austauschkapazität zwischen den Zonen
-df_exchange['Total Exchange Capacity'] = df_exchange.groupby(['From','to'])['DC_MW'].transform('sum')
-print(df_exchange)
+#df_exchange['Total Exchange Capacity'] = df_exchange.groupby(['From','to'])['DC_MW'].transform('sum')
+#print(df_exchange)
 #df_exchange2 = df_exchange.drop_duplicates(subset=['From'])
 #print("df_exchange2: \n", df_exchange2)
-df_exchange3 = df_exchange.sort_values("From")
-print("df_exchange3: \n", df_exchange3)
-del df_exchange3["AC_MW"]
-del df_exchange3["DC_MW"]
-print(df_exchange3)
+#df_exchange3 = df_exchange.sort_values("From")
+#print("df_exchange3: \n", df_exchange3)
+#del df_exchange3["AC_MW"]
+#del df_exchange3["DC_MW"]
+#print(df_exchange3)
 
 
 
 #Spatial Join
 #sjoined_nodes_states = gdf_buses.sjoin(shapes_filtered[["NUTS_NAME","NUTS_ID","geometry"]], how ="left")
+
+=======
+# coordinate systems are correct?
+#df_buses_selected.crs == shapes_filtered.crs
+#Spatial Join (sjoin from geopandas)
+#sjoined_nodes_states = gpd.sjoin(df_buses["geometry"],shapes_filtered, op="within")
+sjoined_nodes_states = gdf_buses.sjoin(shapes_filtered[["NUTS_NAME","NUTS_ID","geometry"]], how ="left")
 
 #Filtern der Columns die wir brauchen für Zones DE
 #df_zones_DE = sjoined_nodes_states.query("country == 'DE'")
@@ -118,6 +132,11 @@ print(df_exchange3)
 #Szenario 2: Dt= 2 Zonen:
 #Bidding Zone DE1 = DE9+DE5+DE6+DEF+DE8+DE3+DE4+DEE+DED+DEG
 #Bidding Zone DE2 = DEA+DE7+DE2+DEB+DEC+DE1
+
+#How many nodes are in each state bzw zone "state_Bayern" = "NUTS_ID":"DE2"?
+df_zones_DE_filtered.groupby("NUTS_NAME == 'Bayern'").count()
+
+#df.columns = ["NUTS_ID", ‘listings_count’]
 
 #Szenario 3: Dt= 3 Zonen:
 #Bidding Zone DE1: DE9+DE5+DE6+DEF,
@@ -208,7 +227,6 @@ res_curtailment = model.addVars(Y, T, R, lb=0.0, ub = GRB.INFINITY, name="res_cu
 cap_BH = model.addVars(Y, I, lb=0.0, ub = GRB.INFINITY, name = "cap_BH")
 #F_AC = model.addVars(Y, T, L, lb =-GRB.INFINITY, ub=GRB.INFINITY, name="F_AC")
 F_DC = model.addVars(Y, T, LDC, lb =-GRB.INFINITY,ub=GRB.INFINITY, name = "F_DC")
-#Todo Damit es ab hier läuft müssen die Zones definiert sein
 p_load_lost = model.addVars(Y, T, zone, lb=0.0, ub = GRB.INFINITY, name = "p_load_lost")
 #if run_parameter.scen != 1:
 #    cap_E = model.addVars(Y, E, lb=0.0, ub = GRB.INFINITY, name = "cap_E")

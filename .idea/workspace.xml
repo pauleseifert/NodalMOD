@@ -44,7 +44,16 @@
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable"
   }
+<<<<<<< HEAD
 }]]></component>
+=======
+}</component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\Dell\Documents\GitHub\MulCarNI\data\shapes" />
+    </key>
+  </component>
+>>>>>>> 21314d602f2f106ac79e60f17db47d94223c9850
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
@@ -77,6 +86,7 @@
     <breakpoint-manager>
       <breakpoints>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+<<<<<<< HEAD
           <url>file://$PROJECT_DIR$/summarize per power plant.py</url>
           <line>18</line>
           <option name="timeStamp" value="84" />
@@ -85,6 +95,21 @@
           <url>file://$PROJECT_DIR$/model_description.py</url>
           <line>134</line>
           <option name="timeStamp" value="93" />
+=======
+          <url>file://$PROJECT_DIR$/model_description.py</url>
+          <line>92</line>
+          <option name="timeStamp" value="51" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/import_data_object.py</url>
+          <line>346</line>
+          <option name="timeStamp" value="58" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/import_data_object.py</url>
+          <line>697</line>
+          <option name="timeStamp" value="59" />
+>>>>>>> 21314d602f2f106ac79e60f17db47d94223c9850
         </line-breakpoint>
       </breakpoints>
       <default-breakpoints>
