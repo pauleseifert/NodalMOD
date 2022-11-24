@@ -594,7 +594,6 @@ class model_data:
 
         nodes_other_bidding_zone = nodes_geopandas[~nodes_geopandas["country"].isin(scandinavian_bidding_zones["country"])]
         nodes_other_bidding_zone["bidding_zone"] = nodes_other_bidding_zone["country"]
-<<<<<<< HEAD
         self.nodes= pd.concat([nodes_scand_bidding_zones_resolved, nodes_other_bidding_zone]).drop(columns="geometry").sort_index()
 
 #fügt zonen in deutschland ein
@@ -620,10 +619,8 @@ class model_data:
         self.nodes= pd.concat([nodes_german_bidding_zones_resolved, nodes_other_bidding_zone]).drop(columns="geometry").sort_index()
 
 
-=======
         self.nodes = pd.concat([nodes_scand_bidding_zones_resolved, nodes_other_bidding_zone]).drop(
             columns="geometry").sort_index()
->>>>>>> 21314d602f2f106ac79e60f17db47d94223c9850
     def extend_overloaded_lines(self, type, case_name):
         # {index, hours_with_overload_in_3_years}
         # base scenario, subscenario 3

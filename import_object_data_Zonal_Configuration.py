@@ -119,18 +119,34 @@ class model_data:
         #merged_df = df1.merge(df2, on="Name",suffixes=('_left', '_right'))
         #auf Basis der Zones:
 
-        #conventionals
-        conventionals_raw = pd.read_csv("data\import_data\conventionals_filtered.csv", sep=";", index_col=0)
+        # 1) conventionals
+        # TODO: Komma Fehler beim einlesen in der Excel
+        # conventionals_raw = pd.read_csv("data\\import_data\\conventionals_filtered.csv", sep=";", index_col=0)
+        conventionals_filtered = df_generators_merged[
+        df_generators_merged["carrier"].isin(["CCGT", "OCGT", "nuclear", "biomass", "coal", "lignite", "oil"])]
+        # kann nicht weiter gefiltered werden, weil es dann probleme bei den versch. Scen gibt mit "BZ2"
+        # conventionals = conventionals_filtered[
+        # ["p_nom", "carrier", "marginal_cost", "efficiency", "co2_fac", "index", "bidding_zone"]].reset_index(
+        # drop=True)
+        # conventionals.columns = ["P_inst", "type", "mc", "efficiency", "co2_fac", "bus", "bidding_zone"]
+        self.conventionals = conventionals_filtered
 
-        #auf Basis der Nodes:
-        #solar_filtered
-        solar_raw = pd.read_csv("data\import_data\solar_filtered.csv", sep=";", index_col=0)
-        #wind_filtered
-        wind_raw = pd.read_csv("data\import_data\wind_filtered.csv", sep=";", index_col=0)
+        # TODO: Aufsummieren der Convetionals nach BZ und Fuel Type und Capacities
+        # Funktion zum groupen und aufsummeiren der generations and fuels
+        # test = sjoined_nodes_states4.groupby(["NUTS_ID","Fuel"]).sum(numeric_only=True)[["bidding_zone"]]
+        # auf Basis der Nodes:
+        # 2) solar_filtered
+        # solar_raw = pd.read_csv("data\\import_data\\solar_filtered.csv", sep=";", index_col=0)
+        solar_generation = df_generators_merged[df_generators_merged["carrier"].isin(["solar"])]
+        self.solar = solar_generation
+        # 3) wind_filtered
+        # wind_raw = pd.read_csv("data\\import_data\\wind_filtered.csv", sep=";", index_col=0)
+        wind_generation = df_generators_merged[df_generators_merged["carrier"].isin(["onwind", "offwind-ac", "offwind-dc"])]
+        self.wind = wind_generation
 
-        #Funktion zum groupen und aufsummeiren der generations and fuels
-        #test = sjoined_nodes_states4.groupby(["NUTS_ID","Fuel"]).sum(numeric_only=True)[["bidding_zone"]]
+        # Funktion zum groupen und aufsummeiren der generations and fuels
+        # test = sjoined_nodes_states4.groupby(["NUTS_ID","Fuel"]).sum(numeric_only=True)[["bidding_zone"]]
 
-        #demand einlesen mit tyndp_load! Auf basis der BZ
-        #tiemseries einlesen für wind und solar! mir ninja.renewables
+        # demand einlesen mit tyndp_load! Auf basis der BZ
 
+        # tiemseries einlesen für wind und solar! mit ninja.renewables

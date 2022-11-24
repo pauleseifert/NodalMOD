@@ -7,7 +7,7 @@ from gurobipy import GRB
 from gurobipy import Model
 
 from helper_functions import ren_helper2, demand_helper2, create_encyclopedia
-from import_object_data_Zonal_Configuration import model_data, run_parameter
+from import_data_object import model_data, run_parameter
 
 starttime = timeit.default_timer()
 
@@ -15,9 +15,11 @@ starttime = timeit.default_timer()
 run_parameter= run_parameter(scenario_name = "Offshore_Bidding_Zone_Scenario")
 run_parameter.create_scenarios()
 data = model_data(create_res = False,reduced_ts = True, export_files= True, run_parameter = run_parameter)
+#self.demand.to_csv("demand.csv")
+self.demand[0].to_csv("demand.csv")
 
-
-data.nodes.to_csv("data.nodes.csv",sheet_name='data.nodes')
+#pd.DataFrame(self.demand).T.reset_index().to_csv('demand.csv', header=False, index=False)
+#data.nodes.to_csv("data.nodes.csv",sheet_name='data.nodes')
 #TODO:
 
 #TODO: aufbau und structure mit paul duchgehen (runparameter funktionen und scen)
