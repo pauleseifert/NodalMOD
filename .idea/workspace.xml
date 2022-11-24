@@ -102,11 +102,6 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/import_data_object.py</url>
-          <line>365</line>
-          <option name="timeStamp" value="65" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/import_data_object.py</url>
           <line>529</line>
           <option name="timeStamp" value="68" />
         </line-breakpoint>
@@ -116,14 +111,9 @@
           <option name="timeStamp" value="70" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/import_data_object.py</url>
-          <line>186</line>
-          <option name="timeStamp" value="74" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/model_description.py</url>
           <line>18</line>
-          <option name="timeStamp" value="78" />
+          <option name="timeStamp" value="80" />
         </line-breakpoint>
       </breakpoints>
       <default-breakpoints>
