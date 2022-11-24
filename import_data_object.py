@@ -203,6 +203,7 @@ class model_data:
         generators_filtered = generators_matched[
             generators_matched['index'].notnull()]  # take only the ones that are in the countries we want to have
         generators_filtered["index"] = generators_filtered["index"].astype(int)
+
         conventionals_filtered = generators_filtered[
             generators_filtered["carrier"].isin(["CCGT", "OCGT", "nuclear", "biomass", "coal", "lignite", "oil"])]
         conventionals = conventionals_filtered[
@@ -220,6 +221,7 @@ class model_data:
             drop=True)
         wind_filtered.columns = ["max", "type", "bus", "country", "bidding_zone"]
         wind_filtered = wind_filtered.replace({"onwind": "onwind", "offwind-ac": "offwind", "offwind-dc": "offwind"})
+        #solar_filtered.to_csv('solar_filtered.csv')
 
         lines_matched = lines_raw.merge(self.nodes[["index", "old_index"]], how="left", left_on="bus0",
                                         right_on="old_index")
@@ -658,7 +660,7 @@ class model_data:
         windfarms = windfarms.rename(columns={"Latitude (decimal units)": "LAT", "Longitude (decimal units)": "LON"})
         windfarms = windfarms.reset_index(drop=True)
         windfarms[0] = 1000
-        print = False
+        print = True
 
         if print: plotly_maps_bubbles(df=windfarms, scen=9, maps_folder=location + "kini_locations",
                                       name="future_windfarms_locations_all", unit="GW", size_scale=100,

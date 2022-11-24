@@ -7,7 +7,7 @@ from gurobipy import GRB
 from gurobipy import Model
 
 from helper_functions import ren_helper2, demand_helper2, create_encyclopedia
-from import_data_object import model_data, run_parameter
+from import_object_data_Zonal_Configuration import model_data, run_parameter
 
 starttime = timeit.default_timer()
 
@@ -16,8 +16,16 @@ run_parameter= run_parameter(scenario_name = "Offshore_Bidding_Zone_Scenario")
 run_parameter.create_scenarios()
 data = model_data(create_res = False,reduced_ts = True, export_files= True, run_parameter = run_parameter)
 
+
 data.nodes.to_csv("data.nodes.csv",sheet_name='data.nodes')
 #TODO:
+
+#TODO: aufbau und structure mit paul duchgehen (runparameter funktionen und scen)
+#TODO: einlesen der nodes to zones mit unterschiedlichen scenarien
+#TODO: welche Daten fehlen? im Overleaf den Data Teil schreiben (structure)
+#TODO: diskutieren ob es wirklich nötig ist die Nordics mit in das Model mit aufzunhemen (Paul meinte wegen Wasser Zeugs)
+#TODO: Recherche Flexilines - was für Caps für die NTCs nehmen wir?
+
 
 
 #zones festlegen, als set und zuordnung zu den nodes
@@ -110,7 +118,7 @@ print(df_demand3)
 #Spatial Join
 #sjoined_nodes_states = gdf_buses.sjoin(shapes_filtered[["NUTS_NAME","NUTS_ID","geometry"]], how ="left")
 
-=======
+
 # coordinate systems are correct?
 #df_buses_selected.crs == shapes_filtered.crs
 #Spatial Join (sjoin from geopandas)
@@ -134,7 +142,7 @@ sjoined_nodes_states = gdf_buses.sjoin(shapes_filtered[["NUTS_NAME","NUTS_ID","g
 #Bidding Zone DE2 = DEA+DE7+DE2+DEB+DEC+DE1
 
 #How many nodes are in each state bzw zone "state_Bayern" = "NUTS_ID":"DE2"?
-df_zones_DE_filtered.groupby("NUTS_NAME == 'Bayern'").count()
+#df_zones_DE_filtered.groupby("NUTS_NAME == 'Bayern'").count()
 
 #df.columns = ["NUTS_ID", ‘listings_count’]
 
@@ -143,12 +151,25 @@ df_zones_DE_filtered.groupby("NUTS_NAME == 'Bayern'").count()
 #Bidding Zone DE2: DE8+DE3+DE4+DEE+DED+DEG,
 #Bidding Zone DE3: DEA+DE7+DE2+DEB+DEC+DE1
 
+
 #Szenario 4: Dt= 5 Zonen:
 #Bidding Zone DE1: DEF,
 #Bidding Zone DE2: DE9+DE6+DE5,
 #Bidding Zone DE3: DE8+DE3+DE4+DEE+DED+DEG,
 #Bidding Zone DE4: DEA+ DEB+DEC,
 #Bidding Zone DE5: DE2+DE7+DE1
+
+
+#for z in zone:
+
+#total generation = sum ()
+
+# Beispiele
+#    c_cap = [gen[0]+gen[1] for gen,p in zip(network.generators.index, network.generators.p_nom) if 'solar' in gen or 'wind' in gen if p!=0]
+#    c_cap=list(set(c_cap))
+#    countries = network.buses.country.unique()
+#    countries = (list(set(countries)-set(c_cap)))
+
 
 # Create a new model
 model: Model = gp.Model("Offshore_Bidding_Zones")
