@@ -186,16 +186,20 @@ class model_data:
         busses_filtered.columns = ["index", "old_index", "LON", "LAT", "country"]
         self.nodes = busses_filtered
 
-        # resolve bidding zones in NO and SE
+        # resolve bidding zones in NO and SE and Germany
         if (("NO") or ("SE") or ("DK")) in run_parameter.country_selection:
             self.resolve_bidding_zones()
+ #       if ("GE") in run_parameter.country_selection:
+ #           self.resolve_german_bidding_zones()
         else:
             self.nodes["bidding_zone"] = self.nodes["country"]
+
 
         # cleaning the conventional plants
         generators = pd.concat([generators_raw, run_parameter.EI_bus[["p_nom_max", "bus", "carrier"]]])
         generators_matched = generators.merge(self.nodes[["index", "old_index", "country", "bidding_zone"]], how="left",
                                               left_on="bus", right_on="old_index")
+        #hier nach summieren
         generators_filtered = generators_matched[
             generators_matched['index'].notnull()]  # take only the ones that are in the countries we want to have
         generators_filtered["index"] = generators_filtered["index"].astype(int)
@@ -570,34 +574,56 @@ class model_data:
             short_ts = pd.concat([short_ts, current_day])
         return short_ts.reset_index(drop=True)
 
+#fügt zonen in scandinavien ein
     def resolve_bidding_zones(self):
         try:
             import geopandas as gpd
-            scandinavian_bidding_zones = gpd.read_file("data/shapes/scandinavian_bidding_zones.geojson").set_index(
-                "bidding_zone")
-        except:
-           sys.exit("Error loading bidding zone shape")
-        nodes_geopandas = gpd.GeoDataFrame(self.nodes, geometry=gpd.points_from_xy(self.nodes.LON, self.nodes.LAT),
-                                           crs="EPSG:4326")
+            scandinavian_bidding_zones = gpd.read_file("data/shapes/scandinavian_bidding_zones.geojson").set_index("bidding_zone")
+        except: sys.exit("Error loading Scandinavian bidding zone shape")
+        nodes_geopandas = gpd.GeoDataFrame(self.nodes, geometry=gpd.points_from_xy(self.nodes.LON, self.nodes.LAT), crs="EPSG:4326")
         nodes_scand_bidding_zones = nodes_geopandas.query('country in ["DK", "SE", "NO"]')
-        nodes_scand_bidding_zones_resolved = nodes_scand_bidding_zones.sjoin(scandinavian_bidding_zones[["geometry"]],
-                                                                             how="left", predicate='intersects').rename(
-            columns={"index_right": "bidding_zone"})
-        if nodes_scand_bidding_zones_resolved['bidding_zone'].isna().sum() >= 1:
-            missing = nodes_scand_bidding_zones_resolved.loc[
-                      pd.isna(nodes_scand_bidding_zones_resolved["bidding_zone"]), :].index
-            print("not all nodes are matched! " + str(len(missing)) + " are missing")
+        nodes_scand_bidding_zones_resolved = nodes_scand_bidding_zones.sjoin(scandinavian_bidding_zones[["geometry"]], how="left", predicate='intersects').rename(columns={"index_right":"bidding_zone"})
+        if nodes_scand_bidding_zones_resolved['bidding_zone'].isna().sum()>=1:
+            missing = nodes_scand_bidding_zones_resolved.loc[pd.isna(nodes_scand_bidding_zones_resolved ["bidding_zone"]), :].index
+            print("not all Scandinavian nodes are matched! " + str(len(missing))+ " are missing")
             print(missing.values)
 
             # add the missing values
             nodes_scand_bidding_zones_resolved.at[217, "bidding_zone"] = "DK2"
             nodes_scand_bidding_zones_resolved.at[486, "bidding_zone"] = "SE4"
 
-        nodes_other_bidding_zone = nodes_geopandas[
-            ~nodes_geopandas["country"].isin(scandinavian_bidding_zones["country"])]
+        nodes_other_bidding_zone = nodes_geopandas[~nodes_geopandas["country"].isin(scandinavian_bidding_zones["country"])]
         nodes_other_bidding_zone["bidding_zone"] = nodes_other_bidding_zone["country"]
+<<<<<<< HEAD
+        self.nodes= pd.concat([nodes_scand_bidding_zones_resolved, nodes_other_bidding_zone]).drop(columns="geometry").sort_index()
+
+#fügt zonen in deutschland ein
+    def resolve_german_bidding_zones(self):
+        try:
+            import geopandas as gpd
+            german_bidding_zones = gpd.read_file("data/shapes/NUTS_RG_10M_2021_4326.geojson").set_index("bidding_zone")
+        except: sys.exit("Error loading German bidding zone shape")
+        nodes_geopandas = gpd.GeoDataFrame(self.nodes, geometry=gpd.points_from_xy(self.nodes.LON, self.nodes.LAT), crs="EPSG:4326")
+        nodes_germ_bidding_zones = nodes_geopandas.query('country in ["GE"]')
+        nodes_germ_bidding_zones_resolved = nodes_germ_bidding_zones.sjoin(german_bidding_zones[["geometry"]], how="left", predicate='intersects').rename(columns={"index_right":"bidding_zone"})
+        if nodes_germ_bidding_zones_resolved['bidding_zone'].isna().sum()>=1:
+            missing = nodes_germ_bidding_zones_resolved.loc[pd.isna(nodes_germ_bidding_zones_resolved ["bidding_zone"]), :].index
+            print("not all German nodes are matched! " + str(len(missing))+ " are missing")
+            print(missing.values)
+
+            # add the missing values
+    #        nodes_germ_bidding_zones_resolved.at[217, "bidding_zone"] = "DK2"
+    #        nodes_germ_bidding_zones_resolved.at[486, "bidding_zone"] = "SE4"
+
+        nodes_other_bidding_zone = nodes_geopandas[~nodes_geopandas["country"].isin(german_bidding_zones["country"])]
+        nodes_other_bidding_zone["bidding_zone"] = nodes_other_bidding_zone["country"]
+        self.nodes= pd.concat([nodes_german_bidding_zones_resolved, nodes_other_bidding_zone]).drop(columns="geometry").sort_index()
+
+
+=======
         self.nodes = pd.concat([nodes_scand_bidding_zones_resolved, nodes_other_bidding_zone]).drop(
             columns="geometry").sort_index()
+>>>>>>> 21314d602f2f106ac79e60f17db47d94223c9850
     def extend_overloaded_lines(self, type, case_name):
         # {index, hours_with_overload_in_3_years}
         # base scenario, subscenario 3

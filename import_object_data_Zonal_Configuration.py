@@ -150,4 +150,3 @@ class model_data:
         #demand einlesen mit tyndp_load! Auf basis der BZ
         #tiemseries einlesen für wind und solar! mir ninja.renewables
 
-

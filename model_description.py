@@ -6,7 +6,6 @@ import pandas as pd
 from gurobipy import GRB
 from gurobipy import Model
 
-
 from helper_functions import ren_helper2, demand_helper2, create_encyclopedia
 from import_object_data_Zonal_Configuration import model_data, run_parameter
 
@@ -15,14 +14,19 @@ starttime = timeit.default_timer()
 #load model parameters
 run_parameter= run_parameter(scenario_name = "Offshore_Bidding_Zone_Scenario")
 run_parameter.create_scenarios()
-
 data = model_data(create_res = False,reduced_ts = True, export_files= True, run_parameter = run_parameter)
+
+
+data.nodes.to_csv("data.nodes.csv",sheet_name='data.nodes')
+#TODO:
 
 #TODO: aufbau und structure mit paul duchgehen (runparameter funktionen und scen)
 #TODO: einlesen der nodes to zones mit unterschiedlichen scenarien
 #TODO: welche Daten fehlen? im Overleaf den Data Teil schreiben (structure)
 #TODO: diskutieren ob es wirklich nötig ist die Nordics mit in das Model mit aufzunhemen (Paul meinte wegen Wasser Zeugs)
 #TODO: Recherche Flexilines - was für Caps für die NTCs nehmen wir?
+
+
 
 #zones festlegen, als set und zuordnung zu den nodes
 shapes = gpd.read_file('data/shapes/NUTS_RG_10M_2021_4326.geojson')
@@ -32,21 +36,128 @@ shapes_filtered = shapes.query("LEVL_CODE ==1")
 df_buses = pd.read_csv("data/PyPSA_elec1024/buses.csv", index_col=0)
 #df_buses['geometry'] = [Point(xy) for xy in zip(df_buses.x, df_buses.y)]
 gdf_buses = gpd.GeoDataFrame(df_buses, geometry=gpd.points_from_xy(df_buses.x, df_buses.y), crs="EPSG:4326")
+
+
+#case 1=1 Zone, 2=2 zones, 3= 3 zones, 4 = 5 zones
+bidding_zone_configuration = 1
+
+#hier die funktionen rein, welche die nodes entsprechend den zonen zuordnen
+match bidding_zone_configuration:
+            case 1:
+                df_capacity = pd.DataFrame(
+                    {
+                        "Bidding_zone": ["DE1", "DE2", "DE2","DE3", "DE1", "DE3", "FR", "DE1", "DE1"],
+                        "Plant": ["nuklear", "gas", "gas", "coal", "coal", "gas", "gas", "nuklear", "nuklear"],
+                        "Capacity_MW": [10, 15, 2.5, 20, 25, 25, 15, 10,7.5]
+                    }
+                )
+                df_demand = pd.DataFrame(
+                    {
+                    "Bidding_zone": ["DE1", "DE2", "DE2","DE3", "DE1", "DE3", "FR", "DE1", "DE1"],
+                            "Demand_MW": [10, 15, 2.5, 20, 25, 25, 15, 10, 7.5]
+                    }
+                )
+
+                df_exchange = pd.DataFrame(
+                    {
+                        "From": ["DE1", "DE2", "DE2", "DE3", "DE1", "DE3", "FR", "DE1", "DE2"],
+                        "to": ["DE2", "DE1", "DE3", "FR", "DE3", "DE1", "DE2", "DE2", "DE1"],
+                        "AC_MW": [10, 15, 2.5, 20, 25, 25, 15, 10, 7.5],
+                        "DC_MW": [10, 15, 2.5, 20, 25, 25, 15, 10, 7.5]
+                    }
+                )
+                print("Germany as one bidding zone")
+            case 2:
+                df_final=[]#funktion
+                print("Germany as two bidding zones")
+            case 3:
+                df_final=[]#funktion
+                print("Germany as three bidding zones")
+            case 4:
+                df_final=[]#funktion
+                print("Germany as five bidding zones")
+
+
+#summiert die Kapazitäten für jede PowerPlant (Fuel) pro Zone auf
+
+# groupby nimmt zwei colums und applied eine function -> transform(sum)
+# transform(sum) -> summiert argument ['Capacity_MW']
+# df['Total'] -> legt neue Spalte an "Total" und schreibt den Ausdruck df.groupby ein
+df_capacity['Total Capacity'] = df_capacity.groupby(['Bidding_zone', 'Plant'])['Capacity_MW'].transform('sum')
+print(df_capacity)
+df_capacity2 = df_capacity.drop_duplicates(subset=['Bidding_zone', 'Plant'])
+print("df_capacity2: \n", df_capacity2)
+df_capacity3 = df_capacity2.sort_values("Bidding_zone")
+print("df_capacity3: \n", df_capacity3)
+del df_capacity3["Capacity_MW"]
+print(df_capacity3)
+
+#summiert die Demand für jede PowerPlant (Fuel) pro Zone auf
+df_demand['Total Demand'] = df_demand.groupby(['Bidding_zone'])['Demand_MW'].transform('sum')
+print(df_demand)
+df_demand2 = df_demand.drop_duplicates(subset=['Bidding_zone'])
+print("df_demand2: \n", df_demand2)
+df_demand3 = df_demand2.sort_values("Bidding_zone")
+print("df_demand3: \n", df_demand3)
+del df_demand3['Demand_MW']
+print(df_demand3)
+
+#Berechnung der gesamten Austauschkapazität zwischen den Zonen
+#df_exchange['Total Exchange Capacity'] = df_exchange.groupby(['From','to'])['DC_MW'].transform('sum')
+#print(df_exchange)
+#df_exchange2 = df_exchange.drop_duplicates(subset=['From'])
+#print("df_exchange2: \n", df_exchange2)
+#df_exchange3 = df_exchange.sort_values("From")
+#print("df_exchange3: \n", df_exchange3)
+#del df_exchange3["AC_MW"]
+#del df_exchange3["DC_MW"]
+#print(df_exchange3)
+
+
+
+#Spatial Join
+#sjoined_nodes_states = gdf_buses.sjoin(shapes_filtered[["NUTS_NAME","NUTS_ID","geometry"]], how ="left")
+
+
 # coordinate systems are correct?
 #df_buses_selected.crs == shapes_filtered.crs
 #Spatial Join (sjoin from geopandas)
 #sjoined_nodes_states = gpd.sjoin(df_buses["geometry"],shapes_filtered, op="within")
 sjoined_nodes_states = gdf_buses.sjoin(shapes_filtered[["NUTS_NAME","NUTS_ID","geometry"]], how ="left")
+
 #Filtern der Columns die wir brauchen für Zones DE
-df_zones_DE = sjoined_nodes_states.query("country == 'DE'")
-df_zones_DE_filtered = df_zones_DE.filter(['NUTS_NAME', 'country', 'NUTS_ID', 'geometry'])
+#df_zones_DE = sjoined_nodes_states.query("country == 'DE'")
+#df_zones_DE_filtered = df_zones_DE.filter(['NUTS_NAME', 'country', 'NUTS_ID', 'geometry'])
+
+#ToDo
+#Szenario 1: Dt= 1 Zone
+#Szenario 2: Dt= 2 Zonen: DE1: NI+BR+HH+SH+MV+B+BB+SA+S+TH DE2: NRW+HE+BY+RP+SL+BW
+#Szenario 3: Dt= 3 Zonen: DE1: NI+BR+HH+SH, DE2:MV+B+BB+SA+S+TH, DE3: NRW+HE+BY+RP+SL+BW
+#Szenario 4: Dt= 5 Zonen: DE1: SH, DE2: NI+HH+BR, DE3: MV+B+BB+SA+S+TH, DE4: NRW+ RP+SL, DE5: BY+HE+BW
+
+#Szenario 1: Bidding Zone DE1 = DE1-DE9, DEA-DEG
+
+#Szenario 2: Dt= 2 Zonen:
+#Bidding Zone DE1 = DE9+DE5+DE6+DEF+DE8+DE3+DE4+DEE+DED+DEG
+#Bidding Zone DE2 = DEA+DE7+DE2+DEB+DEC+DE1
 
 #How many nodes are in each state bzw zone "state_Bayern" = "NUTS_ID":"DE2"?
 #df_zones_DE_filtered.groupby("NUTS_NAME == 'Bayern'").count()
 
 #df.columns = ["NUTS_ID", ‘listings_count’]
 
-#zone = ["DE1","DE2", "DE3", "DE4", "NO1", "NO2", "NO3", "DK1", "DK2", "BALTIC", "NORTH"]
+#Szenario 3: Dt= 3 Zonen:
+#Bidding Zone DE1: DE9+DE5+DE6+DEF,
+#Bidding Zone DE2: DE8+DE3+DE4+DEE+DED+DEG,
+#Bidding Zone DE3: DEA+DE7+DE2+DEB+DEC+DE1
+
+
+#Szenario 4: Dt= 5 Zonen:
+#Bidding Zone DE1: DEF,
+#Bidding Zone DE2: DE9+DE6+DE5,
+#Bidding Zone DE3: DE8+DE3+DE4+DEE+DED+DEG,
+#Bidding Zone DE4: DEA+ DEB+DEC,
+#Bidding Zone DE5: DE2+DE7+DE1
 
 
 #for z in zone:
@@ -58,6 +169,7 @@ df_zones_DE_filtered = df_zones_DE.filter(['NUTS_NAME', 'country', 'NUTS_ID', 'g
 #    c_cap=list(set(c_cap))
 #    countries = network.buses.country.unique()
 #    countries = (list(set(countries)-set(c_cap)))
+
 
 # Create a new model
 model: Model = gp.Model("Offshore_Bidding_Zones")
@@ -183,7 +295,7 @@ if run_parameter.scen in [1]:
 
 
 model.addConstrs((P_C[y, t, g] <= data.dispatchable_generators[y]["P_inst"][g] for g in G for t in T for y in Y), name="GenerationLimitUp")
-
+#helper funktion die zurück gibt in zone x alle renewables
 #Renewable Generation
 model.addConstrs((P_R[y, t, r] <= data.res_series[y][r][t] for r in R for t in T for y in Y), name="ResGenerationLimitUp")
 
