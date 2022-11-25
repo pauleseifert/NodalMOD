@@ -106,16 +106,18 @@ class model_data:
         #TODO: haben wir doppelte generation von offshore wind drin? müssen wir den DF filtern? Mergen mit den BZ Scenarios anhand der Nodes Index?
         #TODO: überall wo df steht self austauschen
         #generators = pd.read_csv("data\import_data\generators_filtered.csv", sep=";", index_col=0)
-        df_generators = pd.read_csv("data\\import_data\\generators_filtered.csv", sep=",")
+        df_generators = pd.read_csv("data\\import_data\\generators_filtered_v2_gerettet.csv", sep=",", index_col=0)
+        #TODO: die offsh windcluster anfügen
         #mergen der nodes der OffBZ in den generator df
-        df_generators_merged = df_nodes.merge(df_generators[['index', 'p_nom', 'carrier', 'marginal_cost', 'efficiency']], on="index",how='left')
-        self.generators = df_generators_merged
+        #df_generators_merged = self.nodes.merge(df_generators[['name', 'type', 'mc', 'efficiency', 'co2_fac', 'P_inst', 'bus', 'bidding_zone']],
+                                                 right_on='index', left_on='index',how='left')
+        #self.generators = df_dispatchables_merged
         #die OffBZ (also fie carrier offshore) ausgliedern und OffBZ hinzufügen? Sollten wir das tun?
         #TODO: die restlichen OffBZ mit carrier und marginal costs eintragen
             #filter = offwind_ac, offwind_dc und nan
-            options_offwind = ['offwind-ac', 'offwind-dc', '']
+            #options_offwind = ['offwind-ac', 'offwind-dc', '']
             # selecting rows based on condition
-            df_offwind = df_generators_merged.loc[df_generators_merged['carrier'].isin(options_offwind)]
+            #df_offwind = df_generators_merged.loc[df_generators_merged['carrier'].isin(options_offwind)]
         #merged_df = df1.merge(df2, on="Name",suffixes=('_left', '_right'))
         #auf Basis der Zones:
 

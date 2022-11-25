@@ -12,11 +12,14 @@ from import_data_object import model_data, run_parameter
 starttime = timeit.default_timer()
 
 #load model parameters
-run_parameter= run_parameter(scenario_name = "Offshore_Bidding_Zone_Scenario")
+run_parameter = run_parameter(scenario_name = "Offshore_Bidding_Zone_Scenario")
 run_parameter.create_scenarios()
 data = model_data(create_res = False,reduced_ts = True, export_files= True, run_parameter = run_parameter)
 #self.demand.to_csv("demand.csv")
-self.demand[0].to_csv("demand.csv")
+
+#self.generators_filtered.to_csv("generators_filtered.csv")
+#self.demand[0].to_csv("demand.csv")
+#data.dispatchable_generators.to_csv("dispatchable_generators.csv")
 
 #pd.DataFrame(self.demand).T.reset_index().to_csv('demand.csv', header=False, index=False)
 #data.nodes.to_csv("data.nodes.csv",sheet_name='data.nodes')
