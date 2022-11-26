@@ -34,7 +34,6 @@ class run_parameter:
             self.case_name = scenario_name
             self.years = 1
             self.timesteps = 10
-            self.scen = 1
             self.sensitivity_scen = 0
             self.scen = 1  # hier szenario 5 erstellen für zonen
             self.sensitivit_scen = 0
@@ -594,7 +593,6 @@ class model_data:
 
         nodes_other_bidding_zone = nodes_geopandas[~nodes_geopandas["country"].isin(scandinavian_bidding_zones["country"])]
         nodes_other_bidding_zone["bidding_zone"] = nodes_other_bidding_zone["country"]
-<<<<<<< HEAD
         self.nodes= pd.concat([nodes_scand_bidding_zones_resolved, nodes_other_bidding_zone]).drop(columns="geometry").sort_index()
 
 #fügt zonen in deutschland ein
@@ -620,10 +618,10 @@ class model_data:
         self.nodes= pd.concat([nodes_german_bidding_zones_resolved, nodes_other_bidding_zone]).drop(columns="geometry").sort_index()
 
 
-=======
+
         self.nodes = pd.concat([nodes_scand_bidding_zones_resolved, nodes_other_bidding_zone]).drop(
             columns="geometry").sort_index()
->>>>>>> 21314d602f2f106ac79e60f17db47d94223c9850
+
     def extend_overloaded_lines(self, type, case_name):
         # {index, hours_with_overload_in_3_years}
         # base scenario, subscenario 3
@@ -716,7 +714,7 @@ class model_data:
         # additional_node.index = np.arange(len(new_nodes), len(new_nodes) + len(additional_node))
         if print: plotly_maps_bubbles(df=additional_node, scen=9, maps_folder=location + "kini_locations",
                                       name="future_windfarms_locations_NL", unit="GW", size_scale=100,
-                                      title="findfarms")
+                                      title="findfarms",year=0)
         # nodes die ich haben möchte
         # additional_node = additional_node[additional_node.index.isin([547,550,551])]
         # additional_node.index = np.arange(len(new_nodes), len(new_nodes) + len(additional_node))
@@ -733,7 +731,7 @@ class model_data:
         # additional_node.index = np.arange(len(new_nodes), len(new_nodes) + len(additional_node))
         if print: plotly_maps_bubbles(df=additional_node, scen=9, maps_folder=location + "kini_locations",
                                       name="future_windfarms_locations_UK", unit="GW", size_scale=100,
-                                      title="findfarms")
+                                      title="findfarms",year=0)
         # nodes die ich haben möchte
         # additional_node = additional_node[additional_node.index.isin([551,560,558, 550, 559, 568, 552, 548, 567, 557, 552, 548, 567, 557, 575, 574, 569, 565, 570, 563, 547, 564, 578, 576])]
         # additional_node.index = np.arange(len(new_nodes), len(new_nodes) + len(additional_node))
@@ -753,7 +751,7 @@ class model_data:
         # additional_node.index = np.arange(len(new_nodes), len(new_nodes) + len(additional_node))
         if print: plotly_maps_bubbles(df=additional_node, scen=9, maps_folder=location + "kini_locations",
                                       name="future_windfarms_locations_PL", unit="GW", size_scale=100,
-                                      title="findfarms")
+                                      title="findfarms",year=0)
 
         # new_nodes = pd.concat([new_nodes, additional_node])
         for i in range(534, 535):

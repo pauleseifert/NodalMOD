@@ -57,14 +57,14 @@ class run_parameter:
                           "DEB": "DEII2", "DEC": "DEII2", "DE1": "DEII2", "DE2": "DEII2", "DE7": "DEII2",
                           "OffBZN": "OffBZN", "OffBZB": "OffBZB"}
             case "BZ3":
-                self.lookup_dict = {"DEF": "DEII1", "DE6": "DEII1", "DE9": "DEII1", "DE3": "DEII2", "DE4": "DEII2",
-                                  "DE8": "DEII2", "DED": "DEII2", "DEE": "DEII2", "DEG": "DEII2", "DEA": "DEII3",
-                                  "DEB": "DEII3", "DEC": "DEII3", "DE1": "DEII3", "DE2": "DEII3", "DE7": "DEII3",
+                self.lookup_dict = {"DEF": "DEIII1", "DE6": "DEIII1", "DE9": "DEIII1", "DE3": "DEIII2", "DE4": "DEIII2",
+                                  "DE8": "DEIII2", "DED": "DEIII2", "DEE": "DEIII2", "DEG": "DEIII2", "DEA": "DEIII3",
+                                  "DEB": "DEIII3", "DEC": "DEIII3", "DE1": "DEIII3", "DE2": "DEIII3", "DE7": "DEIII3",
                                   "OffBZN": "OffBZN", "OffBZB": "OffBZB"}
             case "BZ5":
-                self.lookup_dict = {"DEF": "DEII1", "DE6": "DEII2", "DE9": "DEII2", "DE3": "DEII3", "DE4": "DEII3",
-                                  "DE8": "DEII3", "DED": "DEII3", "DEE": "DEII3", "DEG": "DEII3", "DEA": "DEII4",
-                                  "DEB": "DEII4", "DEC": "DEII4", "DE1": "DEII5", "DE2": "DEII5", "DE7": "DEII5",
+                self.lookup_dict = {"DEF": "DEV1", "DE6": "DEV2", "DE9": "DEV2", "DE3": "DEV3", "DE4": "DEV3",
+                                  "DE8": "DEV3", "DED": "DEV3", "DEE": "DEV3", "DEG": "DEV3", "DEA": "DEV4",
+                                  "DEB": "DEV4", "DEC": "DEV4", "DE1": "DEV5", "DE2": "DEV5", "DE7": "DEV5",
                                   "OffBZN": "OffBZN", "OffBZB": "OffBZB"}
         match self.sensitivity_scen:
             case 0:
@@ -102,6 +102,16 @@ class model_data:
         self.ntc_BZ_3 = pd.read_csv("data\\import_data\\NTC\\NTC_BZ_3.csv", sep=";")
         self.ntc_BZ_5 = pd.read_csv("data\\import_data\\NTC\\NTC_BZ_5.csv", sep=";")
 
+        #DEMAND
+        df_demand = pd.read_csv("data\\import_data\\demand.csv", sep=",")
+        df_demand_T = df_demand.T
+
+        df_demand_final = df_demand_T.rename_axis('index').reset_index()
+        df_demand_final['index'] = df_demand_final['index'].astype(int)
+        df_demand_merged = df_demand_final.merge(df_nodes, on="index",how='left')
+
+
+
         #reading in generation (erst mergen mit den BZ Scenarios und den NUTS)
         #TODO: haben wir doppelte generation von offshore wind drin? müssen wir den DF filtern? Mergen mit den BZ Scenarios anhand der Nodes Index?
         #TODO: überall wo df steht self austauschen?
@@ -109,8 +119,19 @@ class model_data:
         df_generators = pd.read_csv("data\\import_data\\generators_filtered.csv", sep=";", index_col=0)
         #mergen der nodes der OffBZ in den generator df
         df_generators_merged = df_nodes.merge(df_generators[['index', 'p_nom', 'carrier', 'marginal_cost', 'efficiency']], on="index",how='left')
+        df_offshore = df_generators_merged.loc[(df_generators_merged['carrier'].isin(['offwind-ac','offwind-dc']))]
+        #df_only_offshore_wind = df_generators_merged.drop(columns= carrier[('CCGT', 'onwind', 'solar', 'ror', 'nucelar', 'biomass', 'coal'))
+
+        # aufsummieren der gesamt capacity je carrier and zone !! BZ2 ist eingesetzt! warum geht hier nicht: self.scen?
+        df_generators_merged['Total conventional Capacity'] = df_generators_merged.groupby([run_parameter.scen, 'carrier'])['p_nom'].transform('sum')
+ #von Paul:       test = df_generators_merged.groupby([run_parameter.scen, 'carrier']).sum(numeric_only=True)[['p_nom']]
+
+        df_total_cap = df_generators_merged.drop_duplicates(subset=[run_parameter.scen, 'carrier'])
+
         #df_generators_merged.to_csv('generators_merged.csv', index=False)
-        self.generators = df_generators_merged
+        #self.generators = df_generators_merged
+
+
         #TODO: die OffBZ (also fie carrier offshore) ausgliedern und OffBZ hinzufügen? Sollten wir das tun?
         #TODO: die restlichen OffBZ mit carrier und marginal costs eintragen
             #filter = offwind_ac, offwind_dc und nan
@@ -123,13 +144,13 @@ class model_data:
         # 1) conventionals
         #TODO: Komma Fehler beim einlesen in der Excel
             #conventionals_raw = pd.read_csv("data\\import_data\\conventionals_filtered.csv", sep=";", index_col=0)
-            conventionals_filtered = df_generators_merged[df_generators_merged["carrier"].isin(["CCGT", "OCGT", "nuclear", "biomass", "coal", "lignite", "oil"])]
+#            conventionals_filtered = df_generators_merged[df_generators_merged["carrier"].isin(["CCGT", "OCGT", "nuclear", "biomass", "coal", "lignite", "oil"])]
             #kann nicht weiter gefiltered werden, weil es dann probleme bei den versch. Scen gibt mit "BZ2"
             #conventionals = conventionals_filtered[
                 #["p_nom", "carrier", "marginal_cost", "efficiency", "co2_fac", "index", "bidding_zone"]].reset_index(
                 #drop=True)
             #conventionals.columns = ["P_inst", "type", "mc", "efficiency", "co2_fac", "bus", "bidding_zone"]
-            self.conventionals = conventionals_filtered
+#           self.conventionals = conventionals_filtered
 
         # TODO: Aufsummieren der Convetionals nach BZ und Fuel Type und Capacities
         #Funktion zum groupen und aufsummeiren der generations and fuels
@@ -137,12 +158,12 @@ class model_data:
         #auf Basis der Nodes:
         # 2) solar_filtered
         #solar_raw = pd.read_csv("data\\import_data\\solar_filtered.csv", sep=";", index_col=0)
-        solar_generation = df_generators_merged[df_generators_merged["carrier"].isin(["solar"])]
-            self.solar = solar_generation
+#        solar_generation = df_generators_merged[df_generators_merged["carrier"].isin(["solar"])]
+#            self.solar = solar_generation
         # 3) wind_filtered
         #wind_raw = pd.read_csv("data\\import_data\\wind_filtered.csv", sep=";", index_col=0)
-        wind_generation = df_generators_merged[df_generators_merged["carrier"].isin(["onwind", "offwind-ac", "offwind-dc"])]
-            self.wind = wind_generation
+#        wind_generation = df_generators_merged[df_generators_merged["carrier"].isin(["onwind", "offwind-ac", "offwind-dc"])]
+#           self.wind = wind_generation
 
         #Funktion zum groupen und aufsummeiren der generations and fuels
         #test = sjoined_nodes_states4.groupby(["NUTS_ID","Fuel"]).sum(numeric_only=True)[["bidding_zone"]]

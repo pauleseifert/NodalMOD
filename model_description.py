@@ -16,8 +16,20 @@ run_parameter= run_parameter(scenario_name = "Offshore_Bidding_Zone_Scenario")
 run_parameter.create_scenarios()
 data = model_data(create_res = False,reduced_ts = True, export_files= True, run_parameter = run_parameter)
 
+data.demand[0].to_csv(r'C:\Users\marie\Documents\NTNU\Specialization Project\DataFrames Model\demand.csv', index=False)
+data.ac_lines.to_excel(r'C:\Users\marie\Documents\NTNU\Specialization Project\DataFrames Model\ac_lines.xlsx', index=False)
+data.dc_lines.to_excel(r'C:\Users\marie\Documents\NTNU\Specialization Project\DataFrames Model\dc_lines.xlsx', index=False)
+data.dispatchable_generators[0].to_csv(r'C:\Users\marie\Documents\NTNU\Specialization Project\DataFrames Model\dispatchable_generators.csv', index=False)
+data.nodes.to_excel(r'C:\Users\marie\Documents\NTNU\Specialization Project\DataFrames Model\nodes.xlsx', index=False)
+data.res_series[0].to_excel(r'C:\Users\marie\Documents\NTNU\Specialization Project\DataFrames Model\res_series.xlsx', index=False)
+data.reservoir.to_excel(r'C:\Users\marie\Documents\NTNU\Specialization Project\DataFrames Model\reservoir.xlsx', index=False)
+data.reservoir_zonal_limit.to_excel(r'C:\Users\marie\Documents\NTNU\Specialization Project\DataFrames Model\reservoir_zonal_limit.xlsx', index=False)
+data.ror_series.to_excel(r'C:\Users\marie\Documents\NTNU\Specialization Project\DataFrames Model\ror_series.xlsx', index=False)
+data.storage.to_excel(r'C:\Users\marie\Documents\NTNU\Specialization Project\DataFrames Model\storage.xlsx', index=False)
 
-data.nodes.to_csv("data.nodes.csv",sheet_name='data.nodes')
+df_demand=data.demand[0]
+print(df_demand)
+
 #TODO:
 
 #TODO: aufbau und structure mit paul duchgehen (runparameter funktionen und scen)
@@ -62,8 +74,8 @@ match bidding_zone_configuration:
                     {
                         "From": ["DE1", "DE2", "DE2", "DE3", "DE1", "DE3", "FR", "DE1", "DE2"],
                         "to": ["DE2", "DE1", "DE3", "FR", "DE3", "DE1", "DE2", "DE2", "DE1"],
-                        "AC_MW": [10, 15, 2.5, 20, 25, 25, 15, 10, 7.5],
-                        "DC_MW": [10, 15, 2.5, 20, 25, 25, 15, 10, 7.5]
+                        "AC_MW": [10, 10, 2.5, 20, 25, 25, 15, 10, 7.5],
+                        "DC_MW": [15, 15, 2.5, 20, 25, 25, 15, 10, 7.5]
                     }
                 )
                 print("Germany as one bidding zone")
@@ -92,15 +104,6 @@ print("df_capacity3: \n", df_capacity3)
 del df_capacity3["Capacity_MW"]
 print(df_capacity3)
 
-#summiert die Demand für jede PowerPlant (Fuel) pro Zone auf
-df_demand['Total Demand'] = df_demand.groupby(['Bidding_zone'])['Demand_MW'].transform('sum')
-print(df_demand)
-df_demand2 = df_demand.drop_duplicates(subset=['Bidding_zone'])
-print("df_demand2: \n", df_demand2)
-df_demand3 = df_demand2.sort_values("Bidding_zone")
-print("df_demand3: \n", df_demand3)
-del df_demand3['Demand_MW']
-print(df_demand3)
 
 #Berechnung der gesamten Austauschkapazität zwischen den Zonen
 #df_exchange['Total Exchange Capacity'] = df_exchange.groupby(['From','to'])['DC_MW'].transform('sum')
@@ -159,10 +162,6 @@ sjoined_nodes_states = gdf_buses.sjoin(shapes_filtered[["NUTS_NAME","NUTS_ID","g
 #Bidding Zone DE4: DEA+ DEB+DEC,
 #Bidding Zone DE5: DE2+DE7+DE1
 
-
-#for z in zone:
-
-#total generation = sum ()
 
 # Beispiele
 #    c_cap = [gen[0]+gen[1] for gen,p in zip(network.generators.index, network.generators.p_nom) if 'solar' in gen or 'wind' in gen if p!=0]
