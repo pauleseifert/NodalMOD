@@ -3,11 +3,8 @@ from dataclasses import dataclass, astuple
 import numpy as np
 import pandas as pd
 
-from printing_funct import plotly_maps_bubbles
-
 pd.options.mode.chained_assignment = None
-from helper_functions import demand_columns, give_nearest_bus_relative_position, Myobject
-from mapping import new_res_mapping
+from helper_functions import Myobject, match_nearest_node, merge_timeseries_supply, fix_multiple_parallel_lines
 import pickle
 import requests
 import json
@@ -27,18 +24,20 @@ class run_parameter:
             self.scen = int(sys.argv[4])
             self.sensitivity_scen = int(sys.argv[5])
         # local execution parameters
-        elif (platform == "darwin") or (platform == "windows"):
+        elif (platform == "darwin") or (platform == "win32"):
             self.directory = ""
             self.case_name = scenario_name
-            self.years = 3
-            self.timesteps = 10
+            self.years = [2030]
+            self.timesteps = 4000
             self.scen = 1
             self.sensitivity_scen = 0
         self.solving = False
         self.reduced_TS = False
         self.export_model_formulation = self.directory + "results/" + self.case_name + "/model_formulation_scen"+ str(self.scen) +"_subscen" + str(self.sensitivity_scen)+".mps"
         self.export_folder = self.directory + "results/" + self.case_name + "/" + str(self.scen) + "/" + "subscen" + str(self.sensitivity_scen) + "/"
-        self.import_folder = self.directory + "data/"
+        self.data_folder = self.directory + "data/"
+        self.import_folder =  self.data_folder+"powergamma/"
+
         os.makedirs(self.export_folder, exist_ok=True)
         #
         self.hours = 504 #21 representative days
@@ -50,299 +49,417 @@ class run_parameter:
             case 1:
                 self.electrolyser = []
                 print("BASE case")
-            case 2:
-                self.electrolyser = pd.DataFrame({
-                    "name": ["electrolyser Bornholm", "electrolyser_NS1", "electrolyser_NS2"],
-                    "bus": [521, 522, 523],
-                    "cost": [645000, 645000, 645000]})
-                print("EI case")
-            case 3:
-                self.electrolyser = pd.DataFrame({
-                    "name": ["electrolyser Bornholm", "electrolyser_NS1", "electrolyser_NS2", "e1", "e2", "e3", "e4", "e5",
-                             "e6", "e7", "e8", "e9", "e10", "e11", "e12", "e13", "e14"],
-                    "bus": [521, 522, 523, 403, 212, 209, 170, 376, 357, 279, 103, 24, 357, 62, 467, 218, 513],
-                    "cost": [645000, 645000, 645000, 450000, 450000, 450000, 450000, 450000, 450000, 450000, 450000, 450000,
-                             450000, 450000, 450000, 450000, 450000]
-                })
-                print("COMBI case")
-            case 4:
-                self.electrolyser = pd.DataFrame({
-                    "name": ["electrolyser Bornholm", "electrolyser_NS1", "electrolyser_NS2", "e1", "e2", "e3", "e4", "e5",
-                             "e6", "e7", "e8", "e9", "e10", "e11", "e12", "e13", "e14"],
-                    "bus": [521, 522, 523, 403, 212, 209, 170, 376, 357, 279, 103, 24, 357, 62, 467, 218, 513],
-                    "cost": [645000, 645000, 645000, 450000, 450000, 450000, 450000, 450000, 450000, 450000, 450000, 450000,
-                             450000, 450000, 450000, 450000, 450000]})
-                print("Stakeholder case")
+            case _:
+                pass
 
         match self.sensitivity_scen:
             case 0:
                 print("Base scenario sensitivity")
-                self.CO2_price = [80, 120, 160]
+                self.CO2_price = {2030:80, 2035: 120, 2040:160}
                 self.R_H = [108, 108, 108]
                 self.grid_extension = False
-            case 1:
-                print("Low H2 price subscen")
-                self.CO2_price = [80, 120, 160]
-                self.R_H = [81, 81, 81]
-                self.grid_extension = False
-            case 2:
-                print("High H2 price subscen")
-                self.CO2_price = [80, 120, 160]
-                self.R_H = [135, 135, 135]
-                self.grid_extension = False
-            case 3:
-                print("High CO2 price subscen")
-                self.CO2_price = [130, 250, 480]
-                self.R_H = [108, 108, 108]
-                self.grid_extension = False
-            case 4:
-                print("Grid extension")
-                self.CO2_price = [80, 120, 160]
-                self.R_H = [108, 108, 108]
-                self.grid_extension = True
-        self.add_future_windcluster = True
-        self.EI_bus = pd.DataFrame([
-            {"country": "BHEH", "y": 55.13615337829421, "x": 14.898639089359104, "p_nom_max": 3000, "bus": "BHEH", "carrier": "offwind-dc"},
-            {"country": "NSEH1", "y": 55.22300, "x": 3.78700, "p_nom_max": 10000, "bus": "NSEH1", "carrier": "offwind-dc"},
-            {"country": "NSEH2", "y": 55.69354, "x": 3.97940, "p_nom_max": 10000, "bus": "NSEH2", "carrier": "offwind-dc"}], index=["BHEH", "NSEH1", "NSEH2"])
-        self.added_DC_lines = pd.DataFrame(
-            {"p_nom": [1400, 2000, 2000, 700], "length": [720, 267, 400, 300], "index_x": [299, 198, 170, 513],
-             "index_y": [419, 111, 93, 116], "tags": [
-                "North Sea Link 2021: https://tyndp2020-project-platform.azurewebsites.net/projectsheets/transmission/110",
-                "hvdc corridor norGer to WesGer 1034: https://tyndp2020-project-platform.azurewebsites.net/projectsheets/transmission/1034",
-                "hvdc corridor norGer to WesGer 1034: https://tyndp2020-project-platform.azurewebsites.net/projectsheets/transmission/1034",
-                "Hansa Power Bridge 1 https://tyndp2020-project-platform.azurewebsites.net/projectsheets/transmission/176"]})
-        self.added_AC_lines = pd.DataFrame(
-            {"s_nom": [6000.0,1000.0,500.0,1500.0,300.0,400.0,500.0,1500.0,1000.0,3200.0,900.0], "length": [100.0, 40.0, 237.5, 182.0, 27.0, 46.0, 125.0, 95.0, 175.0, 60.0, 200.0], "x":[24.6, 9.84, 58.425, 44.772, 6.642, 11.316, 30.75, 23.37, 43.05, 14.76, 49.2], "index_x": [0, 26, 28, 85, 119, 142, 170, 180, 225, 303, 490],
-             "index_y": [8, 138, 30, 119, 364, 217, 191, 198, 238, 327, 505]})
-        self.flexlines_EI = pd.DataFrame(
-            {"from": [523, 523, 523, 523, 523, 523, 523, 522, 522, 522, 522, 522, 522, 521, 521, 521, 521],
-             "to": [522, 403, 212, 209, 170, 376, 357, 279, 170, 103, 24, 357, 376, 62, 467, 218, 513],
-             "EI": ["NSEH1", "NSEH1", "NSEH1", "NSEH1", "NSEH1", "NSEH1", "NSEH1", "NSEH2", "NSEH2", "NSEH2", "NSEH2", "NSEH2", "NSEH2", "BHEH", "BHEH", "BHEH", "BHEH"]})
 
         self.TRM = 0.7
-        self.country_selection = ['BE', 'CZ', 'DE', 'DK', 'FI', 'NL', 'NO', 'PL', 'SE', 'UK', "NSEH1", "NSEH2", "BHEH"]
-        bidding_zones = ['AL', 'AT', 'BA', 'BE', 'BG', 'CH', 'CZ', 'DE', 'DK1', 'DK2', 'ES', 'FI', 'FR', 'GR', 'HR',
-                         'HU', 'IE', 'IT1', 'IT2', 'IT3', 'IT4', 'IT5', 'ME', 'MK', 'NL', 'NO1', 'NO5', 'NO3', 'NO4',
-                         'NO2', 'PL', 'PT', 'RO', 'RS', 'SE1', 'SE2', 'SE3', 'SE4', 'SI', 'SK', 'UK', 'CBN', 'TYNDP',
-                         'NSEH', 'BHEH']
+        self.country_selection = ["NO", "SE", "FI", "DK"]
+        bidding_zones = ['AL', 'AT', 'BA', 'BE', 'BG', 'CH', 'CZ', 'DE', 'DK1', 'DK2', 'ES', 'FI', 'FR', 'GR', 'HR','HU', 'IE', 'IT1', 'IT2', 'IT3', 'IT4', 'IT5', 'ME', 'MK', 'NL', 'NO1', 'NO5', 'NO3', 'NO4','NO2', 'PL', 'PT', 'RO', 'RS', 'SE1', 'SE2', 'SE3', 'SE4', 'SI', 'SK', 'UK', 'CBN', 'TYNDP','NSEH', 'BHEH']
         self.bidding_zones_overview = pd.DataFrame({"bidding zones": ['AL', 'AT', 'BA', 'BE', 'BG', 'CH', 'CZ', 'DE', 'DK1','DK2', 'ES', 'FI', 'FR', 'GR', 'HR', 'HU', 'IE', 'IT1','IT2', 'IT3', 'IT4', 'IT5', 'ME', 'MK', 'NL', 'NO1','NO5', 'NO3', 'NO4', 'NO2', 'PL', 'PT', 'RO', 'RS','SE1', 'SE2', 'SE3', 'SE4', 'SI', 'SK', 'UK', 'CBN','TYNDP', 'NSEH', 'BHEH'],
                                                "zone_number": [i for i, v in enumerate(bidding_zones)],
                                                "country": ["AL", "AT", "BA", "BE", "BG", "CH", "CZ", "DE", "DK", "DK","ES", "FI", "FR", "GR", "HR", "HU", "IE", "IT", "IT", "IT","IT", "IT", "ME", "MK", "NL", "NO", "NO", "NO", "NO", "NO","PL", "PT", "RO", "RS", "SE", "SE", "SE", "SE", "SI", "SK","UK", "CBN", "TYNDP", "NSEH", "BHEH"]})
-
+        self.bidding_zone_selection=self.bidding_zones_overview.query('country in @self.country_selection')["bidding zones"].to_list()
 
 class model_data:
     def __init__(self, create_res,reduced_ts, export_files, run_parameter):
         self.CO2_price = run_parameter.CO2_price
         #reading in the files
-        busses_raw = pd.read_csv(run_parameter.import_folder+ "PyPSA_elec1024/buses.csv", index_col=0)
-        generators_raw = pd.read_csv(run_parameter.import_folder + "PyPSA_elec1024/generators.csv", index_col=0)
-        lines_raw = pd.read_csv(run_parameter.import_folder + "PyPSA_elec1024/lines.csv", index_col=0)
-        links_raw = pd.read_csv(run_parameter.import_folder + "PyPSA_elec1024/links.csv", index_col=0)
-        load_raw = pd.read_csv(run_parameter.import_folder+ "PyPSA_elec1024/load.csv", index_col=0).reset_index(drop=True)
-        ror_ts = pd.read_csv(run_parameter.import_folder + "PyPSA_elec1024/hydro_ror_ts.csv", low_memory=False)
-        dam_maxsum_ts = pd.read_csv(run_parameter.import_folder + "PyPSA_elec1024/hydro_dam_ts.csv", low_memory=False)
-        hydro_database = pd.read_csv(run_parameter.import_folder+ "jrc-hydro-power-plant-database.csv")
+        if create_res:
+            busses_raw =  pd.read_csv(run_parameter.import_folder + "grid_nordelNew_bus.csv", sep=";")
+            generators_raw = pd.read_csv(run_parameter.import_folder + "grid_nordelNew_gen.csv", sep=";")
+            coordinates= pd.read_csv(run_parameter.import_folder + "nordel_coordinates.csv", index_col=0)
+            load_entsoe_ts = pd.read_csv(run_parameter.import_folder+ "entsoe_demand_2019.csv", index_col=0).reset_index(drop=True)
+            lines_raw = pd.read_csv(run_parameter.import_folder + "grid_nordelNew_branch.csv", sep=";")
+            dam_ts = pd.read_csv(run_parameter.import_folder + "/timeseries/hydro_dam_ts.csv", low_memory=False)
+            ror_ts = pd.read_csv(run_parameter.import_folder + "/timeseries/hydro_ror_ts.csv", low_memory=False)
+            open_hydro_database = pd.read_csv(run_parameter.data_folder + "/jrc-hydro-power-plant-database.csv")
 
-        # cleaning the nodes dataframe
-        run_parameter.country_selection.append("GB")
-        #adding the EI's
-        busses_raw = pd.concat([busses_raw, run_parameter.EI_bus])
-        busses_filtered = busses_raw[busses_raw["country"].isin(run_parameter.country_selection)].reset_index().reset_index()
-        busses_filtered = busses_filtered.replace({"GB": "UK"})
-        busses_filtered = busses_filtered[["level_0", "index", "x", "y", "country"]]
-        busses_filtered.columns = ["index", "old_index", "LON", "LAT", "country"]
-        self.nodes = busses_filtered
+            # cleaning the nodes dataframe
 
-        # resolve bidding zones in NO and SE
-        if (("NO") or ("SE") or ("DK")) in run_parameter.country_selection:
-            self.resolve_bidding_zones()
+            #attaching the coordinates
+            busses_coordinates = busses_raw.merge(coordinates[["lat", "lon"]], how = "left", left_on = "bus_id", right_index=True)
+            busses_filtered = busses_coordinates[["bus_id", "Pd","area", "lat", "lon"]]
+            busses_filtered.columns = ["bus_id", "load_snapshot","country", "LAT", "LON"]
+            self.nodes = busses_filtered
+
+            # resolve bidding zones in NO and SE
+            if (("NO") or ("SE") or ("DK")) in run_parameter.country_selection:
+                self.resolve_bidding_zones()
+            else:
+                self.nodes["bidding_zone"] = self.nodes["country"]
+
+            #cleaning the conventional plants
+            generators_raw = generators_raw[["bus_id", "Pmax", "Pmin", "Gtype", "MC", "Start_up"]]
+            generators_matched = generators_raw.merge(self.nodes.reset_index(), how="left", left_on="bus_id", right_on="bus_id")
+            generators_matched = generators_matched[["index", "country", "Pmax", "Pmin", "Gtype", "MC", "Start_up", "bidding_zone"]]
+            generators_matched.columns = ["node", "country", "P_inst", "P_min", "carrier", "mc","ramp_up", "bidding_zone"]
+            conventionals_filtered = generators_matched[generators_matched["carrier"].isin(["gas", "hard_coal", "oil", "Nuclear", "not", "Renew_other_than_wind"])]
+            conventionals = conventionals_filtered.reset_index(drop=True)
+            conventionals["node"] = conventionals["node"].astype(int)
+
+            lines_matched = lines_raw.merge(self.nodes.reset_index()[["index", "bus_id"]], how="left", left_on="bus_from",right_on="bus_id")
+            lines_matched = lines_matched.merge(self.nodes.reset_index()[["index", "bus_id"]], how="left", left_on="bus_to",right_on="bus_id")
+            lines_filtered = lines_matched[lines_matched['index_x'].notnull()]
+            lines_filtered = lines_filtered[lines_filtered['index_y'].notnull()]
+
+            lines = lines_filtered[["rate_b", "x", "index_x", "index_y"]].reset_index(drop=True)
+            lines.columns = ["pmax", "x", "from", "to"]
+            lines = lines[lines["pmax"]>0.1]
+            lines["from"] = lines["from"].astype(int)
+            lines["to"] = lines["to"].astype(int)
+
+            lines["max"] = lines["pmax"] * run_parameter.TRM
+            #lines_DC["max"] = lines_DC["pmax"] * run_parameter.TRM
+            lines = self.find_duplicate_lines(lines)
+            self.ac_lines = lines
+            #self.dc_lines = lines_DC
+
+
+            # load TYNDP values
+            self.tyndp_values(run_parameter=run_parameter)
+
+            # new demand
+            #self.demand = demand_columns(self.nodes, load_raw, self.tyndp_load)
+
+            load_entsoe_ts.columns = load_entsoe_ts.columns.str.replace("_", "")
+            self.scaling_demand(load_entsoe_ts = load_entsoe_ts, years = run_parameter.years)
+
+            # get new renewables
+            self.renewables_mapping(run_parameter = run_parameter, query_ts = False, export_files = export_files)
+            #self.res_series, self.share_solar, self.share_wind = new_res_mapping(self, old_solar=solar_filtered, old_wind=wind_filtered, create_res_mapping=create_res, location = run_parameter.import_folder, query_ts=False)
+
+
+            hydro_selection = open_hydro_database.query("country_code in @run_parameter.country_selection")[["installed_capacity_MW", "type", "country_code", "lat", "lon", "storage_capacity_MWh"]]
+            hydro_selection.sort_values("country_code", inplace=True)
+            hydro_nodes = np.empty(0, dtype=int)
+            for country in hydro_selection["country_code"].unique():
+                hydro_nodes = np.append(hydro_nodes, match_nearest_node(search_lat=hydro_selection.query("country_code == @country")["lat"].to_numpy(),
+                                                          search_lon=hydro_selection.query("country_code == @country")["lon"].to_numpy(),
+                                                          bus_lat=self.nodes.query("country == @country")["LAT"].to_numpy(),
+                                                          bus_lon=self.nodes.query("country == @country")["LON"].to_numpy(),
+                                                          bus_index=self.nodes.query("country == @country").index.to_numpy()))
+            hydro_selection["node"] = hydro_nodes
+            hydro_selection = hydro_selection.merge(self.nodes["bidding_zone"], left_on="node", right_index=True)
+
+            # Hydro reservoir
+            default_storage_capacity = 1000  # MWh
+            dam = hydro_selection[hydro_selection["type"] == "HDAM"]
+            dam_grouped = dam.groupby(["node"]).sum(numeric_only =True)[["installed_capacity_MW"]].reset_index()
+            reservoir = dam_grouped.merge(self.nodes[["country", "bidding_zone"]], left_on = "node", right_index = True).rename(columns = {"installed_capacity_MW":"P_inst"})
+            reservoir[["mc", "carrier", "P_min"]] = 3, "HDAM", 0
+            self.reservoir = reservoir
+            def clear_dam_ts(ts_raw, bz_selection):
+                target_year = ts_raw[ts_raw["y"] == 2018.0]
+                filtered = target_year.drop(["y", "t", "technology"], axis=1).reset_index(drop=True)
+                filtered.columns = filtered.columns.map(lambda x: x.replace('00', '').replace("DKW1", "DK").replace('0', ''))
+                droped_SE_DE = filtered.drop(columns=["DE", "SE"]).rename(columns={"DELU": "DE"})
+                cleared_ts = droped_SE_DE[droped_SE_DE.columns.intersection(bz_selection)]
+                cleared_ts[["DK1", "DK2", "FI"]] = 0
+                return cleared_ts
+            self.reservoir_zonal_limit = clear_dam_ts(dam_ts, run_parameter.bidding_zone_selection)
+
+
+            # RoR
+            ror = hydro_selection[hydro_selection["type"] == "HROR"]
+            ror = ror.drop(["storage_capacity_MWh"], axis=1)
+            ror_aggregated = ror.groupby("node").sum(numeric_only=True)[["installed_capacity_MW"]].merge(self.nodes[["country", "bidding_zone"]], left_index = True, right_index = True).rename(columns = {"installed_capacity_MW":"P_inst", "type":"carrier"})
+            def clear_hydro_ts(ts_raw, countries):
+                target_year = ts_raw[ts_raw["y"] == 2018.0]
+                filtered = target_year.drop(["y", "t", "technology"], axis=1).reset_index(drop=True)
+                filtered.columns = filtered.columns.map(lambda x: x.replace('00', '').replace("DELU", "DE").replace("DKW1", "DK"))
+                cleared_ts = filtered[filtered.columns.intersection(countries)]
+                norway = filtered[filtered.columns.intersection(["NO1", "NO2", "NO3", "NO4", "NO5"])]
+                return pd.concat([cleared_ts, norway], axis=1)
+            ror_ts = clear_hydro_ts(ror_ts, run_parameter.country_selection)
+            ror_ts_T = ror_ts.T
+            ror_bus_ts_matrix_nSE = ror_aggregated[~ror_aggregated["country"].isin(["SE"])].merge(ror_ts_T, how="left", left_on="bidding_zone", right_index=True).drop(["P_inst", 'bidding_zone', "country"], axis=1).T
+            ror_bus_ts_matrix_SE = ror_aggregated[ror_aggregated["country"].isin(["SE"])].merge(ror_ts_T, how="left", left_on="country", right_index=True).drop(["P_inst", 'bidding_zone', "country"], axis=1).T
+            ror_bus_ts_matrix = pd.concat([ror_bus_ts_matrix_nSE, ror_bus_ts_matrix_SE], axis=1)
+            ror_bus_ts_matrix_np = ror_bus_ts_matrix.to_numpy()
+            P_max = ror_aggregated["P_inst"].to_numpy()
+            ror_bus_ts_np = np.multiply(ror_bus_ts_matrix_np, P_max)
+            self.ror_series = pd.DataFrame(ror_bus_ts_np, columns=ror_aggregated.index)
+
+            # PHS
+            PHS = hydro_selection[hydro_selection['type'] == 'HPHS']
+            PHS["storage_capacity_MWh"] = PHS["storage_capacity_MWh"].fillna(default_storage_capacity)
+            self.storage = PHS.rename(columns={'installed_capacity_MW': 'P_inst', 'storage_capacity_MWh': 'capacity', "type": "carrier"}).reset_index(drop=True)
+
+            self.dispatchable_generators = pd.concat([conventionals, reservoir], axis=0).reset_index(drop=True)[["carrier", "mc","P_inst","P_min", "node", "bidding_zone"]]
+            self.reservoir_zonal_limit = self.reservoir_zonal_limit.sum()
+            self.dispatchable_generators = self.conv_scaling_country_specific(run_parameter=run_parameter)
+
+
+            if reduced_ts:
+                try:
+                    u = pd.read_csv(run_parameter.data_folder + "poncelet/u_result.csv", index_col=0)
+                    u_index = u.index[u["value"] == 1.0].to_list()
+                    self.timesteps_reduced_ts = 24*len(u_index)
+                except:
+                    sys.exit("need to run poncelet algorithm first!")
+                self.res_series = {year: self.reduce_timeseries(self.res_series[year], u_index) for year in run_parameter.years}
+                self.demand = {year:self.reduce_timeseries(self.demand[year], u_index) for year in run_parameter.years}
+                self.share_solar = {year:self.reduce_timeseries(self.share_solar[year], u_index) for year in run_parameter.years}
+                self.share_wind = {year:self.reduce_timeseries(self.share_wind[year], u_index)for year in run_parameter.years}
+                self.ror_series = self.reduce_timeseries(self.ror_series, u_index)
+                self.reservoir_zonal_limit  = self.reduce_timeseries(self.reservoir_zonal_limit, u_index)
+
+            if export_files:
+                self.nodes.to_csv(run_parameter.export_folder + "nodes.csv")
+                self.storage.to_csv(run_parameter.export_folder + "storage.csv")
+                self.ac_lines.to_csv(run_parameter.export_folder + "lines.csv")
+                # self.dc_lines.to_csv(run_parameter.export_folder + "lines_DC.csv")
+                self.ror_series.to_csv(run_parameter.export_folder + "ror_supply.csv")
+                self.reservoir.to_csv(run_parameter.export_folder + "reservoir.csv")
+                self.reservoir_zonal_limit.to_csv(run_parameter.export_folder + "reservoir_zonal_limit.csv")
+                with open(run_parameter.export_folder + 'powerplants.pkl', 'wb+') as f:
+                    pickle.dump(self.dispatchable_generators, f)
+                with open(run_parameter.export_folder + 'demand.pkl', 'wb+') as f:
+                    pickle.dump(self.demand, f)
+
         else:
-            self.nodes["bidding_zone"] = self.nodes["country"]
-
-        #cleaning the conventional plants
-        generators = pd.concat([generators_raw,run_parameter.EI_bus[["p_nom_max", "bus", "carrier"]]])
-        generators_matched = generators.merge(self.nodes[["index", "old_index", "country", "bidding_zone"]], how="left",left_on="bus", right_on="old_index")
-        generators_filtered = generators_matched[generators_matched['index'].notnull()] #take only the ones that are in the countries we want to have
-        generators_filtered["index"]=generators_filtered["index"].astype(int)
-        conventionals_filtered = generators_filtered[generators_filtered["carrier"].isin(["CCGT", "OCGT", "nuclear", "biomass", "coal", "lignite", "oil"])]
-        conventionals = conventionals_filtered[["p_nom", "carrier", "marginal_cost", "efficiency", "co2_fac","index", "bidding_zone"]].reset_index(drop=True)
-        conventionals.columns = ["P_inst", "type", "mc","efficiency", "co2_fac", "bus", "bidding_zone"]
-
-        solar_matched = generators_filtered[generators_filtered["carrier"].isin(["solar"])]
-        wind_matched = generators_filtered[generators_filtered["carrier"].isin(["onwind", "offwind-ac", "offwind-dc"])]
-        solar_filtered = solar_matched[["p_nom_max", "carrier", "index", "country", "bidding_zone"]].reset_index(drop=True)
-        solar_filtered.columns = ["max", "type", "bus", "country", "bidding_zone"]
-        solar_filtered = solar_filtered.replace({"solar": "Solar"})
-        wind_filtered = wind_matched[["p_nom_max", "carrier","index", "country", "bidding_zone"]].reset_index(drop=True)
-        wind_filtered.columns = ["max", "type", "bus", "country", "bidding_zone"]
-        wind_filtered = wind_filtered.replace({"onwind": "onwind", "offwind-ac": "offwind", "offwind-dc": "offwind"})
-
-        lines_matched = lines_raw.merge(self.nodes[["index", "old_index"]], how="left", left_on="bus0",right_on="old_index")
-        lines_matched = lines_matched.merge(self.nodes[["index", "old_index"]], how="left", left_on="bus1",right_on="old_index")
-        lines_filtered = lines_matched[lines_matched['index_x'].notnull()]
-        lines_filtered = lines_filtered[lines_filtered['index_y'].notnull()]
-        # https://pypsa.readthedocs.io/en/latest/components.html?highlight=parameters#line-types
-        lines_filtered["x"] = 0.246 * lines_filtered["length"]
-        # add future lines from tyndp data
-        lines_added_projects = pd.concat([lines_filtered, run_parameter.added_AC_lines])
-        lines = lines_added_projects[["s_nom", "x", "index_x", "index_y"]].reset_index(drop=True)
-        lines.columns = ["pmax", "x", "from", "to"]
-        lines["from"] = lines["from"].astype(int)
-        lines["to"] = lines["to"].astype(int)
-
-        lines_DC_matched = links_raw.merge(self.nodes[["index", "old_index"]], how="left", left_on="bus0",right_on="old_index")
-        lines_DC_matched = lines_DC_matched.merge(self.nodes[["index", "old_index"]], how="left", left_on="bus1",right_on="old_index")
-        lines_DC_filtered = lines_DC_matched[lines_DC_matched['index_x'].notnull()]
-        lines_DC_filtered = lines_DC_filtered[lines_DC_filtered['index_y'].notnull()]
-        # See lines_V02.csv
-        lines_DC_filtered = pd.concat([lines_DC_filtered, run_parameter.added_DC_lines])
-        lines_DC = lines_DC_filtered[["p_nom", "index_x", "index_y"]].reset_index(drop=True)
-        lines_DC.columns = ["pmax", "from", "to"]
-        lines_DC["from"] = lines_DC["from"].astype(int)
-        lines_DC["to"] = lines_DC["to"].astype(int)
-        lines_DC.insert(3, "EI", 'N/A')
-        lines_DC = pd.concat([lines_DC, run_parameter.flexlines_EI], ignore_index=True)
-
-        lines["max"] = lines["pmax"] * run_parameter.TRM
-        lines_DC["max"] = lines_DC["pmax"] * run_parameter.TRM
-        self.ac_lines = lines
-        self.dc_lines = lines_DC
-
-
-        # load TYNDP values
-        self.tyndp_values(path=run_parameter.import_folder, bidding_zone_encyc=run_parameter.bidding_zones_overview)
-
-        # new demand
-        self.demand = demand_columns(self.nodes, load_raw, self.tyndp_load)
-
-        # get new renewables
-        self.res_series, self.share_solar, self.share_wind = new_res_mapping(self, old_solar=solar_filtered, old_wind=wind_filtered, create_res_mapping=create_res, location = run_parameter.import_folder, query_ts=False)
-
-        hydro_df = hydro_database.rename(columns={"lat": "LAT", "lon": "LON"})
-        hydro_df = hydro_df[hydro_df["country_code"].isin(run_parameter.country_selection)]
-        hydro_df = hydro_df.drop(['id', 'dam_height_m', 'volume_Mm3', 'pypsa_id', 'GEO', 'WRI', "country_code"], axis=1)
-        hydro_numpy = hydro_df[["LAT", "LON"]].to_numpy()
-        dict_bus = self.nodes[["LAT", "LON"]].to_dict()
-        bus_vector = give_nearest_bus_relative_position(bus_raw=dict_bus, hydro_numpy=hydro_numpy)
-        hydro_df['bus'] = bus_vector
-        hydro_df = hydro_df.merge(self.nodes[["country", "bidding_zone"]], left_on = "bus", right_index = True)
-        hydro_df = hydro_df.rename(columns={'installed_capacity_MW': 'P_inst'})
-
-
-        # Hydro reservoir
-        default_storage_capacity = 1000  # MWh
-        dam = hydro_df[hydro_df["type"] == "HDAM"]
-        dam["mc"] = 30  # Euro/MWh
-        dam = dam.drop(["pumping_MW", "storage_capacity_MWh"], axis=1)
-        # BE, FI have no limits on reservoir
-        dam_unlimited = dam[dam["country"].isin(["BE", "FI"])]
-        dam_limited = dam[~dam["country"].isin(["BE", "FI"])]
-        dam_limited = dam_limited.groupby(["bus"]).sum(numeric_only = True)[["P_inst"]].reset_index()
-        self.reservoir = dam_limited.merge(self.nodes[["country", "bidding_zone"]], left_on = "bus", right_index = True)
-        def clear_dam_ts(ts_raw, countries):
-            target_year = ts_raw[ts_raw["y"] == 2018.0]
-            filtered = target_year.drop(["y", "t", "technology"], axis=1).reset_index(drop=True)
-            filtered.columns = filtered.columns.map(
-                lambda x: x.replace('00', '').replace("DKW1", "DK").replace('0', ''))
-            droped_SE_DE = filtered.drop(columns=["DE", "SE"]).rename(columns={"DELU": "DE"})
-            cleared_ts = droped_SE_DE[droped_SE_DE.columns.intersection(countries)]
-            NO_SE = filtered[filtered.columns.intersection(["NO1", "NO2", "NO3", "NO4", "NO5", "SE1", "SE2", "SE3", "SE4"])]
-            return pd.concat([cleared_ts, NO_SE], axis=1)
-        limited_dam_ts = clear_dam_ts(dam_maxsum_ts, run_parameter.country_selection)
-
-
-        # RoR
-        ror = hydro_df[hydro_df["type"] == "HROR"]
-        ror = ror.drop(["pumping_MW", "storage_capacity_MWh"], axis=1)
-        ror_aggregated = ror.groupby("bus").sum(numeric_only = True)[["P_inst"]].merge(self.nodes[["country", "bidding_zone"]], left_index = True, right_index = True)
-        def clear_hydro_ts(ts_raw, countries):
-            target_year = ts_raw[ts_raw["y"] == 2018.0]
-            filtered = target_year.drop(["y", "t", "technology"], axis=1).reset_index(drop=True)
-            filtered.columns = filtered.columns.map(
-                lambda x: x.replace('00', '').replace("DELU", "DE").replace("DKW1", "DK"))
-            cleared_ts = filtered[filtered.columns.intersection(countries)]
-            norway = filtered[filtered.columns.intersection(["NO1", "NO2", "NO3", "NO4", "NO5"])]
-            return pd.concat([cleared_ts, norway], axis=1)
-        ror_ts = clear_hydro_ts(ror_ts, run_parameter.country_selection)
-        ror_ts_T = ror_ts.T
-        ror_bus_ts_matrix_nSE = ror_aggregated[~ror_aggregated["country"].isin(["SE"])].merge(ror_ts_T, how="left", left_on="bidding_zone", right_index=True).drop(["P_inst", 'bidding_zone', "country"], axis=1).T
-        ror_bus_ts_matrix_SE = ror_aggregated[ror_aggregated["country"].isin(["SE"])].merge(ror_ts_T, how="left", left_on="country", right_index=True).drop(["P_inst", 'bidding_zone', "country"], axis=1).T
-        ror_bus_ts_matrix = pd.concat([ror_bus_ts_matrix_nSE, ror_bus_ts_matrix_SE], axis=1)
-        ror_bus_ts_matrix_np = ror_bus_ts_matrix.to_numpy()
-        P_max = ror_aggregated["P_inst"].to_numpy()
-        ror_bus_ts_np = np.multiply(ror_bus_ts_matrix_np, P_max)
-        self.ror_series = pd.DataFrame(ror_bus_ts_np, columns=ror_aggregated.index)
-
-        # PHS
-        PHS = hydro_df[hydro_df['type'] == 'HPHS']
-        PHS["storage_capacity_MWh"] = PHS["storage_capacity_MWh"].fillna(default_storage_capacity)
-        PHS["pumping_MW"] = PHS["pumping_MW"].fillna(PHS["P_inst"])
-        self.storage = PHS.rename(columns={'P_inst': 'Pmax_out', 'pumping_MW': 'Pmax_in', 'storage_capacity_MWh': 'capacity'}).reset_index(drop=True)
-
-        self.dispatchable_generators = pd.concat([conventionals, dam_unlimited], axis=0).reset_index(drop=True)[["name","type", "mc","efficiency", "co2_fac","P_inst", "bus", "bidding_zone"]]
-
-        #scaling
-        #self.future_values()
-
-        if reduced_ts:
             try:
-                u = pd.read_csv(run_parameter.import_folder + "poncelet/u_result.csv", index_col=0)
-                u_index = u.index[u["value"] == 1.0].to_list()
-                self.timesteps_reduced_ts = 24*len(u_index)
+                with open(run_parameter.export_folder + 'P_max.pkl', 'rb') as f:
+                    self.res_series = pickle.load(f)
+                with open(run_parameter.export_folder + 'share_solar.pkl', 'rb') as f:
+                    self.share_solar = pickle.load(f)
+                with open(run_parameter.export_folder + 'share_wind.pkl', 'rb') as f:
+                    self.share_wind = pickle.load(f)
+                self.nodes = pd.read_csv(run_parameter.export_folder + "nodes.csv")
+                self.storage = pd.read_csv(run_parameter.export_folder + "storage.csv")
+                self.ac_lines = pd.read_csv(run_parameter.export_folder + "lines.csv")
+                # self.dc_lines.to_csv(run_parameter.export_folder + "lines_DC.csv")
+                self.reservoir = pd.read_csv(run_parameter.export_folder + "reservoir.csv")
+                self.reservoir_zonal_limit = pd.read_csv(run_parameter.export_folder + "reservoir_zonal_limit.csv")
+                self.ror_series = pd.read_csv(run_parameter.export_folder + "ror_supply.csv")
+                with open(run_parameter.export_folder + 'powerplants.pkl', 'rb') as f:
+                    self.dispatchable_generators = pickle.load(f)
+                with open(run_parameter.export_folder + 'demand.pkl', 'rb') as f:
+                    self.demand = pickle.load(f)
             except:
-                sys.exit("need to run poncelet algorithm first!")
-            self.res_series = {i: self.reduce_timeseries(self.res_series[i], u_index) for i in [0,1,2]}
-            self.demand = {i:self.reduce_timeseries(self.demand[i], u_index) for i in [0,1,2]}
-            self.share_solar = {i:self.reduce_timeseries(self.share_solar[i], u_index) for i in [0,1,2]}
-            self.share_wind = {i:self.reduce_timeseries(self.share_wind[i], u_index)for i in [0,1,2]}
-            self.ror_series = self.reduce_timeseries(self.ror_series, u_index)
-            self.reservoir_zonal_limit  = self.reduce_timeseries(limited_dam_ts, u_index)
-
-        self.reservoir_zonal_limit = self.reservoir_zonal_limit.sum()
-        self.dispatchable_generators = self.conv_scaling_country_specific()
-        if run_parameter.add_future_windcluster:
-            self.add_future_windcluster(location=run_parameter.import_folder)
+                raise Exception("run the data generation first!")
 
         # Netzausbau
         if run_parameter.grid_extension:
             self.extend_overloaded_lines(type="AC", case_name = run_parameter.case_name)
             self.extend_overloaded_lines(type="DC", case_name = run_parameter.case_name)
+
+
+    def find_duplicate_lines(self, lines):
+        #get rid of multiple lines in the same columns
+        grouped_lines = lines.groupby(["from", "to"]).size()
+        grouped_lines = grouped_lines[grouped_lines>1]
+        for index, count in grouped_lines.items():
+                duplicate_index = lines[(lines["from"] == index[0]) &  (lines["to"] == index[1])].index
+                lines = fix_multiple_parallel_lines(duplicate_index, lines)
+        single_lines_same_order = lines.sort_index().reset_index(drop=True)
+
+        #get rid of multiple lines in the other columns
+
+        grouped_lines_oo = pd.concat([single_lines_same_order, single_lines_same_order.rename(columns= {"to":"from", "from":"to"})]).groupby(["from", "to"]).size()
+        grouped_lines_oo = grouped_lines_oo[grouped_lines_oo>1]
+
+        for index,count in grouped_lines_oo.items():
+            duplicate_index = single_lines_same_order[((single_lines_same_order["from"] == index[0]) & (single_lines_same_order["to"] == index[1])) | ((single_lines_same_order["to"] == index[0]) & (single_lines_same_order["from"] == index[1]))].index
+            single_lines_same_order = fix_multiple_parallel_lines(duplicate_index, single_lines_same_order)
+            #grouped_lines_oo.drop([index[::-1]], inplace=True)
+        single_lines_oo = single_lines_same_order.sort_index().reset_index(drop=True)
+
+        return single_lines_oo
+
+
+    def renewables_mapping(self, run_parameter, query_ts, export_files):
+        def scaling_logic(df_to_scale, tyndp_target, current_value, bz, type, nodes):
+            if tyndp_target == 0:
+                df_to_scale.loc[(df_to_scale['bidding_zone'].isin(bz)) & (df_to_scale['type'] == type), "P_inst"] *= 0
+            elif (current_value == 0) & (len(nodes[nodes["bidding_zone"].isin(bz)]) != 0):
+                number_entries = nodes[nodes["bidding_zone"].isin(bz)].count()[
+                    0]
+                df_to_scale = pd.concat([df_to_scale, pd.DataFrame({"type": type, "node": nodes[nodes["bidding_zone"].isin(bz)].index, "P_inst": [tyndp_target/number_entries for i in range(0, number_entries)], "bidding_zone": [bz[0] for i in range(0, number_entries)]})])
+            elif (len(nodes[nodes["bidding_zone"].isin(bz)]) == 0):
+                pass
+            else:
+                factor = tyndp_target / current_value
+                df_to_scale.loc[(df_to_scale['bidding_zone'].isin(bz)) & (df_to_scale['type'] == type), "P_inst"] *= factor
+            return df_to_scale
+
+        def scaling(df, type, year):
+            df_bz = df.merge(self.nodes["bidding_zone"], left_on="node", right_index=True)
+            df_scaled = df_bz.copy()
+            try:
+                df_bz_grouped = df_bz.groupby(["bidding_zone", "type"]).sum().reset_index()
+            except:
+                df_bz_grouped = 0
+            if type == "wind":
+                for bz in self.tyndp_installed_capacity.index.get_level_values(0).unique():
+                    if bz == "NO1":
+                        tyndp_zone_offshore = self.tyndp_installed_capacity.query("Node == @bz & Fuel == 'Offshore'")[year].sum()
+                        tyndp_zone_onshore = self.tyndp_installed_capacity.query("Node == @bz & Fuel == 'Onshore'")[year].sum()
+                        bz = ["NO1", "NO2", "NO5"]
+                    else:
+                        try:
+                            tyndp_zone_offshore = self.tyndp_installed_capacity.loc[bz].query("Fuel == 'Offshore'")[year].sum()
+                        except:
+                            tyndp_zone_offshore = 0
+                        if tyndp_zone_offshore < 0:
+                            tyndp_zone_offshore = 0
+                        try:
+                            tyndp_zone_onshore = self.tyndp_installed_capacity.loc[bz].query("Fuel == 'Onshore'")[year].sum()
+                        except:
+                            tyndp_zone_onshore = 0
+                        bz = [bz]
+                    inst_onwind_capacity_bz = df_bz_grouped.query("bidding_zone == @bz & type == 'Onshore'")["P_inst"].sum()
+                    inst_offwind_capacity_bz = df_bz_grouped.query("bidding_zone == @bz & type == 'Offshore'")["P_inst"].sum()
+                    df_scaled = scaling_logic(df_to_scale=df_scaled, tyndp_target=tyndp_zone_onshore, current_value=inst_onwind_capacity_bz, type="Onshore", bz=bz, nodes=self.nodes)
+                    df_scaled = scaling_logic(df_to_scale=df_scaled, tyndp_target=tyndp_zone_offshore, current_value=inst_offwind_capacity_bz, type="Offshore", bz=bz, nodes=self.nodes)
+            if type == "solar":
+                for bz in self.tyndp_installed_capacity.index.get_level_values(0).unique():
+                    tyndp_zone = self.tyndp_installed_capacity.query("Node == @bz & Fuel == @type")[year].sum()
+                    if bz == "NO1":
+                        tyndp_zone = self.tyndp_installed_capacity.query("Node == @bz & Fuel == @type")[year].sum()
+                        bz = ["NO1", "NO2", "NO5"]
+                    else:
+                        bz = [bz]
+                    inst_capacity_bz = df_bz_grouped.query("bidding_zone == @bz")["P_inst"].sum()
+                    df_scaled = scaling_logic(df_to_scale=df_scaled, tyndp_target=tyndp_zone,current_value=inst_capacity_bz, type="solar", bz=bz, nodes=self.nodes)
+            df_scaled = df_scaled.sort_index()
+            return df_scaled
+
+        def res_multiplication(solar_capacity,wind_capacity, solar_ts, wind_ts):
+            solar_supply = merge_timeseries_supply(solar_capacity, solar_ts)
+            wind_supply = merge_timeseries_supply(wind_capacity, wind_ts)
+            #if (solar_supply.isnull().values.any()) or (wind_supply.isnull().values.any()):
+            #    raise Exception("Sorry, nas in the wind and solar supply df. Pls. fix!")
+            renewables_full = wind_supply.add(solar_supply, fill_value = 0)
+            share_solar = solar_supply.div(renewables_full, fill_value = 0)
+            share_wind = wind_supply.div(renewables_full, fill_value=0)
+
+            return renewables_full, share_solar, share_wind
+
+
+        res_open_data = pd.read_csv(run_parameter.data_folder + "renewable_power_plants_EU.csv", low_memory=False)
+        res_od_filtered = res_open_data[res_open_data["country"].isin(run_parameter.country_selection)]
+        res_od_filtered = res_od_filtered.rename( columns={"electrical_capacity": "P_inst", "technology": "type", "lat": "LAT", "lon": "LON"})
+        res_od_filtered = res_od_filtered[["country", "type", "P_inst", "LAT", "LON"]]
+        res_od_filtered["type"] = res_od_filtered["type"].replace({"Photovoltaics": "solar"})
+
+        # wind
+        wind_od = res_od_filtered[res_od_filtered["type"].isin(["Onshore", "Offshore"])]
+        wind_od.dropna(axis="index", inplace=True)
+
+        # solar
+        solar_od = res_od_filtered[res_od_filtered["type"].isin(["Photovoltaics"])]
+        solar_od.dropna(axis="index", inplace=True)
+
+        #aggregation into nearest node
+        wind_nodes = np.empty(0, dtype=int)
+        solar_nodes = np.empty(0, dtype=int)
+        for country in wind_od["country"].unique():
+            wind_nodes = np.append(wind_nodes, match_nearest_node(search_lat=wind_od.query("country == @country")["LAT"].to_numpy(),search_lon=wind_od.query("country == @country")["LON"].to_numpy(),bus_lat=self.nodes.query("country == @country")["LAT"].to_numpy(), bus_lon=self.nodes.query("country == @country")["LON"].to_numpy(),bus_index=self.nodes.query("country == @country").index.to_numpy()))
+        for country in solar_od["country"].unique():
+            solar_nodes = np.append(solar_nodes, match_nearest_node(search_lat=solar_od.query("country == @country")["LAT"].to_numpy(),search_lon=solar_od.query("country == @country")["LON"].to_numpy(),bus_lat=self.nodes.query("country == @country")["LAT"].to_numpy(), bus_lon=self.nodes.query("country == @country")["LON"].to_numpy(),bus_index=self.nodes.query("country == @country").index.to_numpy()))
+
+        wind_od["node"]=wind_nodes
+        solar_od["node"]=solar_nodes
+        wind_od_agg = wind_od.merge(self.nodes["bidding_zone"], left_on="node", right_index=True).groupby(["type", "node"]).sum(numeric_only=True)[["P_inst"]].reset_index()
+        solar_od_agg = solar_od.merge(self.nodes["bidding_zone"], left_on = "node", right_index = True).groupby(["type", "node"]).sum(numeric_only=True)[["P_inst"]].reset_index()
+
+        wind_scaled = {y:scaling(df = wind_od_agg, type ="wind", year =y) for y in run_parameter.years}
+        solar_scaled = {y:scaling(df= solar_od_agg, type="solar", year=y) for y in run_parameter.years}
+
+        if query_ts == True:
+            os.makedirs(run_parameter.import_folder + "timeseries/", exist_ok=True)
+            wind_query_set = wind_scaled[run_parameter.years[0]].groupby("node").sum(numeric_only= True).reset_index()
+            wind_query_set = wind_query_set.merge(self.nodes[["LON", "LAT"]], how="left", left_on="node",right_index=True)
+            wind_query_set.to_csv(run_parameter.import_folder + "timeseries/node_wind.csv")
+            solar_query_set = solar_scaled[run_parameter.years[0]].groupby("node").sum(numeric_only=True).reset_index()
+            solar_query_set = solar_query_set.merge(self.nodes[["LON", "LAT"]], how="left", left_on="node",right_index=True)
+            solar_query_set.to_csv(run_parameter.import_folder + "timeseries/node_pv.csv")
+        # read the ts
+        wind_ts = pd.read_csv(run_parameter.import_folder + "timeseries/res_ninja_wind_ts.csv", index_col=0)
+        solar_ts = pd.read_csv(run_parameter.import_folder  + "timeseries/res_ninja_pv_ts.csv", index_col=0)
+
+        os.makedirs(run_parameter.import_folder + "calculated_res/", exist_ok=True)
+
+        self.res_series = {}
+        self.share_solar = {}
+        self.share_wind={}
+        for year in run_parameter.years:
+            res_series, share_solar, share_wind = res_multiplication(solar_scaled[year],wind_scaled[year], solar_ts, wind_ts)
+            self.res_series.update({year: res_series})
+            self.share_solar.update({year: share_solar})
+            self.share_wind.update({year: share_wind})
         if export_files:
-            with open(run_parameter.export_folder + 'powerplants.pkl', 'wb+') as f:
-                pickle.dump(self.dispatchable_generators, f)
-            with open(run_parameter.export_folder + 'demand.pkl', 'wb+') as f:
-                pickle.dump(self.demand, f)
             with open(run_parameter.export_folder + 'P_max.pkl', 'wb+') as f:
                 pickle.dump(self.res_series, f)
+            with open(run_parameter.export_folder + 'share_wind.pkl', 'wb+') as f:
+                pickle.dump(self.share_wind, f)
+            with open(run_parameter.export_folder + 'share_solar.pkl', 'wb+') as f:
+                pickle.dump(self.share_solar, f)
+            #self.res_series = {year: pd.read_csv(run_parameter.export_folder+ 'calculated_res/renewables_full_' + str(year) + '.csv', index_col=0) for year in run_parameter.years}
+            #self.share_solar= {year: pd.read_csv(run_parameter.import_folder + 'calculated_res/share_solar_' + str(year) + '.csv', index_col=0) for year in run_parameter.years}
+            #self.share_solar = {year: pd.read_csv(run_parameter.import_folder + 'calculated_res/share_solar_' + str(year) + '.csv', index_col=0) for year in run_parameter.years}
 
 
-    def conv_scaling_country_specific(self):
-        conventional_h20 = self.dispatchable_generators[self.dispatchable_generators["type"].isin(["HDAM"])]
-        conventional_fossil = self.dispatchable_generators[~self.dispatchable_generators["type"].isin(["HDAM"])]
-        conventional_fossil_grouped = conventional_fossil.groupby(["bidding_zone", "type"]).sum(numeric_only = True)["P_inst"]
 
-        tyndp_installed_capacity = self.tyndp_installed_capacity.reset_index()
-        #ausgabe
-        tyndp_installed_capacity.query('generator == "chp"')
-        tyndp_installed_capacity["generator"].replace({"otherres": "biogas", "other":"gas", "ccgt":"CCGT", "ocgt": "OCGT", "gas":"OCGT"}, inplace=True)
-        # split chp into ccgt,ocgt, coal
-        tyndp_without_chp = tyndp_installed_capacity.query('generator != "chp"')
-        chp = tyndp_installed_capacity.query('generator == "chp"')
-        chp[[2020, 2030,2035, 2040]] = chp[[2020, 2030,2035, 2040]]/3
-        new_chp = pd.DataFrame()
-        for type in ["coal", "CCGT", "OCGT"]:
-            new_entry = chp.copy()
-            new_entry["generator"] = type
-            new_chp = pd.concat([new_chp,new_entry])
-        tyndp_installed_capacity = pd.concat([tyndp_without_chp, new_chp]).reset_index(drop = True)
+    def scaling_demand(self, load_entsoe_ts, years):
+        #load = MWh
+        #TYNDP = GWh
+        def yearly_scaling(load_spatial, load_entsoe_ts, tyndp_demand, year):
+            load_entsoe_ts["RU"]=0
+            load_entsoe_sum = load_entsoe_ts.sum()
+            spatial_sum = load_spatial.groupby("bidding_zone").sum(numeric_only=True)["load_snapshot"]
+            def attach_factors(x, attachement, NO_aggregation=False):
+                if NO_aggregation:
+                    if x["bidding_zone"] in ["NO2", "NO5"]:
+                        factor = attachement["NO1"]
+                    elif x["bidding_zone"] in ["RU"]:
+                        factor = 1
+                    else: factor = attachement[x["bidding_zone"]]
+                else:
+                    factor = attachement[x["bidding_zone"]]
+                return factor
+            load_spatial["spatial_sum"] = load_spatial.apply(lambda x: attach_factors(x, spatial_sum), axis=1)
+            load_spatial["spatial_factor"]= load_spatial["load_snapshot"]/load_spatial["spatial_sum"]
+            try:
+                load_entsoe_sum["NO1"] = load_entsoe_sum["NO1"] + load_entsoe_sum["NO2"] + load_entsoe_sum["NO5"]
+                load_entsoe_sum.drop(["NO2", "NO5"], inplace=True)
+            except: pass
+            scaling_factor_ts = (tyndp_demand[year]*1000)/load_entsoe_sum
+            load_spatial["temporal_factor"] = load_spatial.apply(lambda x: attach_factors(x, scaling_factor_ts, NO_aggregation=True), axis=1)
+            load_spatial["factor_all"] = load_spatial["temporal_factor"].multiply(load_spatial["spatial_factor"], fill_value=0)
 
-        tyndp_installed_capacity_regrouped = tyndp_installed_capacity.groupby(["node", "generator"]).sum(numeric_only = True)
+            scaled_demand = pd.DataFrame()
+            for node in load_spatial.index:
+                scaled_demand = pd.concat([scaled_demand, load_spatial.loc[node]["factor_all"]*load_entsoe_ts[load_spatial.loc[node]["bidding_zone"]]], ignore_index=False, axis=1)
+            scaled_demand.columns = load_spatial.index
+            return scaled_demand
+        demand_yearly = {year: yearly_scaling(load_spatial= self.nodes, load_entsoe_ts = load_entsoe_ts, tyndp_demand=self.tyndp_demand, year=year) for year in years}
+        self.demand = demand_yearly
+        return
 
-        def get_conventional_yearly(tyndp_values, df_2020_capacity_bz, df_2020_capacity_bz_grouped, conventional_h20, year, i, CO2_price):
+    def conv_scaling_country_specific(self, run_parameter):
+        #dict to rename conventional carriers to fit the tyndp categories
+        carrier_matching = {"gas":"Gas", "hard_coal":"Coal & Lignite", "Nuclear":"Nuclear", "oil":"Oil", "Renew_other_than_wind":"Other RES"}
+
+        conventional_h20 = self.dispatchable_generators[self.dispatchable_generators["carrier"].isin(["HDAM"])]
+        conventional_fossil = self.dispatchable_generators[~self.dispatchable_generators["carrier"].isin(["HDAM"])]
+        conventional_fossil["carrier"].replace(carrier_matching, inplace = True)
+
+        conventional_fossil_grouped = conventional_fossil.groupby(["bidding_zone", "carrier"]).sum()["P_inst"]
+        tyndp_installed_capacity = self.tyndp_installed_capacity
+
+        def get_conventional_yearly(tyndp_values, df_2020_capacity_bz, df_2020_capacity_bz_grouped, conventional_h20, year, CO2_price):
             df_scaled_capacity = df_2020_capacity_bz.copy()
             bidding_zones = list(set(df_2020_capacity_bz["bidding_zone"].unique()) - {"NO2", "NO5"})
-            technology = df_scaled_capacity["type"].unique()
+            technology = df_scaled_capacity["carrier"].unique()
             for tech in technology:
                 for bz in bidding_zones:
                     if bz == "NO1":
@@ -367,101 +484,57 @@ class model_data:
                         bz = [bz]
 
                     if tyndp_zone == 0: # Gleichverteiltung über alle relavanten Nodes -> kann verbessert werden wieder mit den Potentialen
-                        df_scaled_capacity.query('bidding_zone in @bz & type == @tech')["P_inst"] = 0
+                        df_scaled_capacity.query('bidding_zone in @bz & carrier == @tech')["P_inst"] = 0
                     elif (tyndp_zone != 0) & (inst_capacity_bz != 0):
                         factor_total = tyndp_zone / inst_capacity_bz
-                        df_scaled_capacity.query('bidding_zone in @bz & type == @tech')["P_inst"]*= factor_total
+                        df_scaled_capacity.query('bidding_zone in @bz & carrier == @tech')["P_inst"]*= factor_total
                         #df_scaled_capacity.loc[df_scaled_capacity['bidding_zone'].isin(bz), "P_inst"] *= factor_total
                     elif (tyndp_zone != 0) & (inst_capacity_bz == 0):
                         number_entries = df_scaled_capacity.query('bidding_zone in @bz').count()[1]
                         df_scaled_capacity.query('bidding_zone in @bz')["P_inst"]= tyndp_zone / number_entries
-                    #print("Installed " + str(tech) + " power in BZ " + str(bz) + " in " + str(year) + " = " + str(df_scaled_capacity.groupby(["bidding_zone", "type"]).sum().query('bidding_zone == @bz & type == @tech')["P_inst"].sum()) + " MW")
-            # df_scaled_capacity.replace([np.inf, -np.inf], 0, inplace=True)
-            df_scaled_capacity["mc"] += df_scaled_capacity["co2_fac"] / df_scaled_capacity["efficiency"] * CO2_price[i]
+            #df_scaled_capacity["mc"] += df_scaled_capacity["co2_fac"] / df_scaled_capacity["efficiency"] * CO2_price[year]
             df_scaled_capacity = pd.concat([df_scaled_capacity, conventional_h20])
             df_scaled_capacity = df_scaled_capacity.reset_index()
             return df_scaled_capacity
-        dispatchable_generators = {i:get_conventional_yearly(tyndp_values=tyndp_installed_capacity_regrouped, df_2020_capacity_bz = conventional_fossil, df_2020_capacity_bz_grouped = conventional_fossil_grouped, conventional_h20= conventional_h20, year = year, i =i, CO2_price = self.CO2_price) for i,year in zip([0,1,2], [2030,2035,2040])}
+        dispatchable_generators = {year:get_conventional_yearly(tyndp_values=tyndp_installed_capacity, df_2020_capacity_bz = conventional_fossil, df_2020_capacity_bz_grouped = conventional_fossil_grouped, conventional_h20= conventional_h20, year = year, CO2_price = self.CO2_price) for year in run_parameter.years}
         return dispatchable_generators
-    def scaling_country_specific(self,ts, scaling_factor, bus):
-        renewables_supply_new = {}
-        renewables_T = ts.T
-        renewables_T.index = renewables_T.index.astype(int)
-        merge_country = renewables_T.merge(bus, left_index=True, right_index=True)[["country"]]
-        merge_factor = merge_country.merge(scaling_factor, how="outer", left_on="country", right_index=True).fillna(
-            1).drop("country", axis=1)
-        renewables_supply_new.update({i: ts * merge_factor.iloc[:, i] for i in range(4)})
-        return renewables_supply_new
-    def future_values(self):
-        open_entrance_dataset = pd.read_csv("data/PyPSA_elec1024/openentrance-v01-al-2022_05_10.csv").fillna(0).iloc[:-1, :]
-        #open_entrance_demand = pd.read_csv("data/north_sea_energy_islands/openentrance_snapshot_1641145432.csv")[:-1]
 
-        open_entrance_dataset["Region"] = open_entrance_dataset["Region"].replace(
-            {"Belgium": "BE", "Czech Republic": "CZ", "Denmark": "DK", "Finland": "FI", "Germany": "DE", "Norway": "NO",
-             "Poland": "PL", "Sweden": "SE", "The Netherlands": "NL", "United Kingdom": "UK"})
+    def tyndp_values(self, run_parameter, filename_capacity = "220310_Updated_Electricity_Modelling_Results.xlsx", filename_demand ="220310_Updated_Electricity_Modelling_Results.xlsx", scenario = "Global Ambition"):
+        df_installed_capacity = pd.read_excel(run_parameter.data_folder+ "/TYNDP/"+filename_capacity, sheet_name="Capacity & Dispatch")
+        df_demand = pd.read_excel(run_parameter.data_folder+ "/TYNDP/"+filename_demand, sheet_name="Demand")
+        ## Supply
+        #data curation
+        #include the market demand from Hydrogen
+        df_installed_capacity["Hydrogen"] = df_installed_capacity["Node/Line"].str.contains("H2R4")
+        #remove other scenarios
+        df_installed_capacity["Special"] = df_installed_capacity["Node/Line"].str.contains("EV2W|H2C1|H2C2|H2C3|H2R1|H2C5|HER4|H2MT")
+        df_installed_capacity["Node"] = df_installed_capacity["Node"].str.split("00", expand=True)[0]
+        #replace the zones
+        df_installed_capacity["Node"] = df_installed_capacity["Node"].replace({"DKE1": "DK1", "DKW1":"DK2", "NOM1":"NO3", "NON1":"NO4", "NOS0":"NO1", "SE01":"SE1", "SE02":"SE2", "SE03":"SE3", "SE04":"SE4"})
+        df_installed_capacity["Fuel"] = df_installed_capacity["Fuel"].replace({"Wind Offshore": "Offshore", "Wind Onshore": "Onshore"})
+        df_installed_capacity["Fuel"] = df_installed_capacity["Fuel"].replace({"Solar": "solar"})
 
-        #open_entrance_dataset[["type_unit", "type_energy", "type_source"]] = open_entrance_dataset['Variable'].str.split('|', 2, expand=True)
+        tyndp_installed_capacity= df_installed_capacity.query('Node in @run_parameter.bidding_zone_selection and Scenario == @scenario and `Climate Year` == "CY 2009" and Parameter == "Capacity (MW)" and Special == False')
+        tyndp_installed_capacity = tyndp_installed_capacity.groupby(["Node", "Year", "Fuel"]).sum(numeric_only = False)["Value"].reset_index(["Year"])
+        tyndp_installed_capacity = tyndp_installed_capacity.pivot(columns ="Year", values ="Value")
 
-        open_entrance_split = open_entrance_dataset.drop(columns=['Type', "PathwayScenario"])
-        open_entrance_split_copy = open_entrance_split.copy()
-        open_entrance_split_copy["Technology"] = open_entrance_split_copy["Technology"].replace({"P_Biomass":"Biomass","CHP_Biomass_Solid_CCS":"Biomass", "CHP_Biomass_Solid":"Biomass","RES_Hydro_Large":"Hydro", "RES_Hydro_Small": "Hydro", 'RES_PV_Utility_Avg': "Solar", 'RES_PV_Utility_Opt': "Solar",
-                                                                                      'Res_PV_Utility_Tracking': "Solar", "RES_Wind_Onshore_Avg": "Wind_onshore", 'RES_Wind_Onshore_Opt': "Wind_onshore",
-                                                                                      'RES_Wind_Offshore_Deep':"Wind_offshore",'RES_Wind_Offshore_Transitional':"Wind_offshore", 'RES_Wind_Offshore_Shallow':"Wind_offshore",
-                                                                                      'RES_Wind_Onshore_Inf': "Wind_onshore", "RES_Geothermal":"Geothermal", "P_Coal_Hardcoal":"Coal", "CHP_Coal_Hardcoal":"Coal",
-                                                                                       'CHP_Coal_Lignite':"Coal", 'P_Gas_CCGT':"Gas",'P_Gas_Engines':"Gas", 'P_Gas_OCGT':"Gas", 'D_Gas_H2':"Gas",'CHP_Gas_CCGT_Natural':"Gas",
-                                                                                       'P_Gas_CCS':"Gas", 'CHP_Gas_CCGT_SynGas':"Gas", 'D_CAES':"Storage",'D_Battery_Li-Ion':"Storage", 'D_PHS':"Storage", 'D_PHS_Residual':"Storage",
-                                                                                       'CHP_Gas_CCGT_Natural_CCS':"Gas", 'P_Coal_Lignite':"Gas", 'P_Oil':"Oil", 'CHP_Oil':"Oil", 'P_Nuclear':"Nuclear", 'RES_PV_Utility_Inf': "Solar"})
+        tyndp_installed_capacity[2035] = (tyndp_installed_capacity[2030] + tyndp_installed_capacity[2040]) / 2
+        self.tyndp_installed_capacity=tyndp_installed_capacity
 
-        open_entrance_split["Technology"] = open_entrance_split["Technology"].replace(
-            {"P_Biomass": "Biomass", "CHP_Biomass_Solid_CCS": "Biomass", "CHP_Biomass_Solid": "Biomass","RES_Hydro_Large": "Hydro", "RES_Hydro_Small": "Hydro",
-             'RES_PV_Utility_Avg': "Solar",'RES_PV_Utility_Opt': "Solar",'Res_PV_Utility_Tracking': "Solar", "RES_Wind_Onshore_Avg": "Wind",
-             'RES_Wind_Onshore_Opt': "Wind",'RES_Wind_Offshore_Deep': "Wind", 'RES_Wind_Offshore_Transitional': "Wind",'RES_Wind_Offshore_Shallow': "Wind",
-             'RES_Wind_Onshore_Inf': "Wind", "RES_Geothermal": "Geothermal", "P_Coal_Hardcoal": "Coal",
-             "CHP_Coal_Hardcoal": "Coal",
-             'CHP_Coal_Lignite': "Coal", 'P_Gas_CCGT': "Gas", 'P_Gas_Engines': "Gas", 'P_Gas_OCGT': "Gas",
-             'D_Gas_H2': "Gas", 'CHP_Gas_CCGT_Natural': "Gas",
-             'P_Gas_CCS': "Gas", 'CHP_Gas_CCGT_SynGas': "Gas", 'D_CAES': "Storage", 'D_Battery_Li-Ion': "Storage",
-             'D_PHS': "Storage", 'D_PHS_Residual': "Storage",
-             'CHP_Gas_CCGT_Natural_CCS': "Gas", 'P_Coal_Lignite': "Gas", 'P_Oil': "Oil", 'CHP_Oil': "Oil",
-             'P_Nuclear': "Nuclear", 'RES_PV_Utility_Inf': "Solar"})
-
-        def check_category(x):
-            if x["Technology"] in ["Biomass", "Hydro", "Wind", "Solar"]:
-                y = True
-            else:
-                y = False
-            return y
-
-        open_entrance_split["renewable"] = open_entrance_split.apply(lambda x: check_category(x), axis=1)
-        self.scaling_res = open_entrance_split[open_entrance_split["renewable"] == True].groupby(["Technology", "Region", "Year"], sort=False).sum().sort_index()
-        self.scaling_res_separate = open_entrance_split_copy[open_entrance_split["renewable"] == True].groupby(["Technology", "Region", "Year"], sort=False).sum().sort_index()
-
-        conventionals = open_entrance_split[open_entrance_split["renewable"] == False].groupby(["Technology", "Region", "Year"], sort=False).sum()
-        self.scaling_conventional = conventionals
-
-    def tyndp_values(self, path, bidding_zone_encyc):
-        tyndp_installed_capacity = pd.read_csv(path+"/TYNDP/capacity_tyndp2020-v04-al-2022_08_08.csv")
-        tyndp_installed_capacity["node"] = tyndp_installed_capacity["node"].str.split("00", expand = True)[0]
-        tyndp_installed_capacity["generator"] = tyndp_installed_capacity["generator"].replace({"otherres": "biomass"})
-        tyndp_installed_capacity = tyndp_installed_capacity.groupby(["node", "generator"]).sum(numeric_only = True).reset_index()
-        tyndp_installed_capacity["node"] = tyndp_installed_capacity["node"].replace({"DKE1": "DK1", "DKW1":"DK2", "NOM1":"NO3", "NON1":"NO4", "NOS0":"NO1", "SE01":"SE1", "SE02":"SE2", "SE03":"SE3", "SE04":"SE4"})
-        tyndp_installed_capacity = tyndp_installed_capacity[tyndp_installed_capacity["node"].isin(["BE", "CZ", "DE", "DK1", "DK2", "NL", "NO1", "NO3", "NO4", "PL", "SE1", "SE2", "SE3", "SE4", "UK", "FI"])].dropna(axis = 1).reset_index(drop=True)
-        tyndp_installed_capacity.rename(columns = {"ga2030": 2030, "ga2040":2040, "2020":2020}, inplace=True)
-        tyndp_installed_capacity["country"] = tyndp_installed_capacity.merge(bidding_zone_encyc, left_on = "node", right_on = "bidding zones")["country"]
-        tyndp_installed_capacity.set_index(["node", "generator"], inplace=True)
-        tyndp_installed_capacity[2035] = (tyndp_installed_capacity[2030]+tyndp_installed_capacity[2040])/2
-
-
-        tyndp_demand = pd.read_csv(path+"/TYNDP/load_tyndp2020-v02-al-2022_08_15.csv").dropna(axis=1)#[["y", "t", "BE", "CZ", "DE", "DK1", "DK2", "NL", "NO1", "NO3", "NO4", "PL", "SE1", "SE2", "SE3", "SE4", "UK", "FI"]]
-        columns = pd.Series(tyndp_demand.columns.str.split("00", expand=True).get_level_values(0))
-        columns = columns.replace({"DKE1": "DK1", "DKW1":"DK2", "NOM1":"NO3", "NON1":"NO4", "NOS0":"NO1", "SE01":"SE1", "SE02":"SE2", "SE03":"SE3", "SE04":"SE4"})
-        tyndp_demand.columns = columns
-        tyndp_demand = tyndp_demand[["YEAR","BE", "CZ", "DE", "DK1", "DK2", "NL", "NO1", "NO3", "NO4", "PL", "SE1", "SE2", "SE3", "SE4", "UK", "FI"]]
-        tyndp_demand_years = {i : tyndp_demand[tyndp_demand["YEAR"] == year].reset_index(drop=True).drop(["YEAR"], axis=1) for year,i in zip([2030, 2040],[0,2])}
-        tyndp_demand_years[1] = (tyndp_demand_years[0]+tyndp_demand_years[2])/2
-
-        self.tyndp_installed_capacity = tyndp_installed_capacity
-        self.tyndp_load = tyndp_demand_years
+        ##Demand
+        # data curation
+        # include the market demand from Hydrogen
+        df_demand["Hydrogen"] = df_demand["Node/Line"].str.contains("H2R4")
+        # remove other scenarios
+        df_demand["Special"] = df_demand["Node/Line"].str.contains("EV2W|H2C1|H2C2|H2C3|H2R1|H2C5|HER4|H2MT")
+        df_demand["Node"] = df_demand["Node"].str.split("00", expand=True)[0]
+        # replace the zones
+        df_demand["Node"] = df_demand["Node"].replace({"DKE1": "DK1", "DKW1": "DK2", "NOM1": "NO3", "NON1": "NO4", "NOS0": "NO1", "SE01": "SE1", "SE02": "SE2","SE03": "SE3", "SE04": "SE4"})
+        tyndp_demand= df_demand.query('Node in @run_parameter.bidding_zone_selection and Scenario == @scenario and `Climate Year` == "CY 2009" and Special == False')
+        tyndp_demand = tyndp_demand.groupby(["Node", "Year"]).sum(numeric_only = False)["Value"].reset_index(["Year"])
+        tyndp_demand = tyndp_demand.pivot(columns="Year", values="Value")
+        tyndp_demand[2035] = (tyndp_demand[2030] + tyndp_demand[2040])/2
+        self.tyndp_demand = tyndp_demand
 
     def reduce_timeseries(self, long_ts, u_index):
         short_ts = pd.DataFrame()
@@ -484,8 +557,7 @@ class model_data:
             print(missing.values)
 
             # add the missing values
-            nodes_scand_bidding_zones_resolved.at[217, "bidding_zone"] = "DK2"
-            nodes_scand_bidding_zones_resolved.at[486, "bidding_zone"] = "SE4"
+            nodes_scand_bidding_zones_resolved.at[8, "bidding_zone"] = "SE1"
 
         nodes_other_bidding_zone = nodes_geopandas[~nodes_geopandas["country"].isin(scandinavian_bidding_zones["country"])]
         nodes_other_bidding_zone["bidding_zone"] = nodes_other_bidding_zone["country"]
@@ -511,94 +583,6 @@ class model_data:
                 for key  in self.dc_lines.index:
                     if key in overloaded_DC_lines.keys():
                         self.dc_lines.loc[key, "max"] = self.dc_lines.loc[key, "max"] * (1+0.2 * overloaded_DC_lines[key]/(self.number_years * self.timesteps_reduced_ts))
-    def add_future_windcluster(self, location):
-        windfarms = pd.read_csv(location+"additional_windfarm_cluster.csv",  encoding="UTF-8").dropna(axis=1)
-        windfarms["Market Zone"] = windfarms["Market Zone"].replace("DELU", "DE").replace("GB", "UK")
-        windfarms = windfarms.rename(columns={"Latitude (decimal units)": "LAT", "Longitude (decimal units)":"LON" })
-        windfarms = windfarms.reset_index(drop=True)
-        windfarms[0] = 1000
-        print = False
-
-        if print: plotly_maps_bubbles(df=windfarms, scen=9, maps_folder= location+"kini_locations", name="future_windfarms_locations_all", unit="GW", size_scale=100,title="findfarms", year =0)
-        #Belgium
-        additional_node = windfarms[windfarms["Market Zone"] == "BE"]
-        if print: plotly_maps_bubbles(df=additional_node, scen=9, maps_folder=location + "kini_locations", name="future_windfarms_locations_BE", unit="GW", size_scale=100, title="findfarms", year =0)
-        #new_nodes = pd.concat([self.nodes, additional_node])
-        additional_dc_lines = pd.DataFrame()
-        # attach every of the clusters to a number of onshore points
-        # north sea
-        for i in range(524, 525):
-            #print(i)
-            additional_dc_lines = pd.concat([additional_dc_lines, pd.DataFrame({"from": (i, i, i, i, i), "to": (24, 366, 288, 523, 522), "EI":("CLUSTER","CLUSTER","CLUSTER","CLUSTER","CLUSTER")})])
-
-        #Deutschland -> hier nehme ich einfach alle
-        additional_node = windfarms[windfarms["Market Zone"] == "DE"]
-        #additional_node.index = np.arange(len(self.nodes), len(self.nodes) + len(additional_node))
-        if print: plotly_maps_bubbles(df=additional_node, scen=9, maps_folder= location+"kini_locations", name="future_windfarms_locations_DE", unit="GW", size_scale=100,title="findfarms", year =0)
-        #new_nodes = pd.concat([new_nodes, additional_node])
-        # attach every of the clusters to a number of onshore points
-        #north sea
-        for i in range(525, 529):
-            additional_dc_lines = pd.concat([additional_dc_lines, pd.DataFrame({"from":(i, i, i, i, i), "to":(170, 212, 373, 523, 522), "EI":("CLUSTER","CLUSTER","CLUSTER","CLUSTER","CLUSTER")})])
-        #baltic
-        for i in range(529, 531):
-            additional_dc_lines = pd.concat([additional_dc_lines, pd.DataFrame({"from":(i, i, i, i), "to":(218, 62, 513, 521), "EI":("CLUSTER","CLUSTER","CLUSTER","CLUSTER")})])
-
-        # Dänemark
-        additional_node = windfarms[windfarms["Market Zone"].isin(["DK1", "DK2"])]
-        #additional_node.index = np.arange(len(new_nodes), len(new_nodes) + len(additional_node))
-        if print: plotly_maps_bubbles(df=additional_node, scen=9, maps_folder= location+"kini_locations", name="future_windfarms_locations_DK", unit="GW", size_scale=100,title="findfarms",year=0)
-        #nodes die ich haben möchte
-
-        for i in range(543, 544):
-            additional_dc_lines = pd.concat([additional_dc_lines, pd.DataFrame({"from": (i, i, i, i,i), "to": (212, 426, 380, 522, 523), "EI":("CLUSTER","CLUSTER","CLUSTER","CLUSTER","CLUSTER")})])
-
-        # Netherlands
-        additional_node = windfarms[windfarms["Market Zone"].isin(["NL"])]
-        #additional_node.index = np.arange(len(new_nodes), len(new_nodes) + len(additional_node))
-        if print: plotly_maps_bubbles(df=additional_node, scen=9, maps_folder= location+"kini_locations", name="future_windfarms_locations_NL", unit="GW", size_scale=100,title="findfarms")
-        #nodes die ich haben möchte
-        #additional_node = additional_node[additional_node.index.isin([547,550,551])]
-        #additional_node.index = np.arange(len(new_nodes), len(new_nodes) + len(additional_node))
-        #plotly_maps_bubbles(df=additional_node, scen=9, maps_folder= location+"kini_locations", name="future_windfarms_locations", unit="GW", size_scale=100,title="findfarms")
-
-        #new_nodes = pd.concat([new_nodes, additional_node])
-        for i in range(531, 534):
-            additional_dc_lines = pd.concat([additional_dc_lines, pd.DataFrame({"from": (i, i, i, i, i, i), "to": (376, 357, 265, 366, 522, 523) , "EI":("CLUSTER","CLUSTER","CLUSTER","CLUSTER","CLUSTER","CLUSTER")})])
-
-        # UK
-        additional_node = windfarms[windfarms["Market Zone"].isin(["UK"])]
-        #additional_node.index = np.arange(len(new_nodes), len(new_nodes) + len(additional_node))
-        if print: plotly_maps_bubbles(df=additional_node, scen=9, maps_folder= location+"kini_locations", name="future_windfarms_locations_UK", unit="GW", size_scale=100,title="findfarms")
-        #nodes die ich haben möchte
-        #additional_node = additional_node[additional_node.index.isin([551,560,558, 550, 559, 568, 552, 548, 567, 557, 552, 548, 567, 557, 575, 574, 569, 565, 570, 563, 547, 564, 578, 576])]
-        #additional_node.index = np.arange(len(new_nodes), len(new_nodes) + len(additional_node))
-        #plotly_maps_bubbles(df=additional_node, scen=9, maps_folder= location+"kini_locations", name="future_windfarms_locations", unit="GW", size_scale=100,title="findfarms")
-
-
-        for i in range(535, 538):
-            additional_dc_lines = pd.concat([additional_dc_lines, pd.DataFrame({"from": (i, i, i, i, i), "to": (300, 292, 307, 522, 523), "EI":("CLUSTER","CLUSTER","CLUSTER","CLUSTER","CLUSTER")})])
-        for i in range(538, 543):
-            additional_dc_lines = pd.concat([additional_dc_lines, pd.DataFrame({"from": (i, i, i, i, i, i), "to": (350, 265, 357 ,24, 522, 523), "EI":("CLUSTER","CLUSTER","CLUSTER","CLUSTER","CLUSTER","CLUSTER")})])
-
-
-        # Poland
-        additional_node = windfarms[windfarms["Market Zone"].isin(["PL"])]
-        #additional_node.index = np.arange(len(new_nodes), len(new_nodes) + len(additional_node))
-        if print: plotly_maps_bubbles(df=additional_node, scen=9, maps_folder= location+"kini_locations", name="future_windfarms_locations_PL", unit="GW", size_scale=100,title="findfarms")
-
-        #new_nodes = pd.concat([new_nodes, additional_node])
-        for i in range(534, 535):
-            additional_dc_lines = pd.concat([additional_dc_lines, pd.DataFrame({"from": (i, i, i, i), "to": (470, 518, 62, 521), "EI":("CLUSTER","CLUSTER","CLUSTER","CLUSTER")})])
-
-        new_dc_lines = pd.concat([self.dc_lines, additional_dc_lines])
-
-        new_dc_lines = new_dc_lines.reset_index(drop=True)
-        #new_nodes = new_nodes.reset_index()
-        self.dc_lines = new_dc_lines
-
-        #plotly_maps_lines_colorless(P_flow=test, P_flow_DC=test2, bus=self.nodes, scen=9, maps_folder=location+"grid_test")
-
 
 class kpi_data:
     def __init__(self, run_parameter, scen):

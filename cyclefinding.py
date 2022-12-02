@@ -1,9 +1,10 @@
 import networkx as nx
-import pandas as pd
 import numpy as np
+import pandas as pd
+
 
 def cycles(lines):
-    def nodes_to_edges(nodes):
+    def nodes_to_edges(nodes, GG):
         elementcount = len(nodes)
         edgelist = []
         for i in range(elementcount):
@@ -18,19 +19,21 @@ def cycles(lines):
                 except:
                     edgelist.append(-(GG[nodes[i+1]][nodes[i]]["name"]))
         return edgelist
+    ## Create 2 graphs and add edges
 
     G = nx.Graph()
     GG = nx.DiGraph()
-    for index, row in lines.iterrows():
-        G.add_edge(row["from"], row["to"], name=index)
-        GG.add_edge(row["from"], row["to"], name=index)
+    lines.apply(lambda x: G.add_edge(int(x["from"]), int(x["to"]), name=x.name), axis = 1)
+    lines.apply(lambda x: GG.add_edge(int(x["from"]), int(x["to"]), name=x.name), axis=1)
 
+
+    #the cycle basis from the undirected graph
     cycles = nx.cycle_basis(G)
     #test_directed_cycles = nx.recursive_simple_cycles(G)
     #test = cycles[1]
     cycle_edges = []
     for nodes in cycles:
-        cycle_edges.append(nodes_to_edges(nodes))
+        cycle_edges.append(nodes_to_edges(nodes, GG))
 
     C_cl = np.zeros((len(cycle_edges), len(lines)), dtype=np.int8)
     for i, cycles in enumerate(cycle_edges):
@@ -41,8 +44,7 @@ def cycles(lines):
                 C_cl[i, abs(nodes)] = -1
     def check_function(G):
         testlist = []
-        test = G.edges(data=True)
-        for node1, node2, i in test:
+        for node1, node2, i in G.edges(data=True):
             testlist.append(i["name"])
         test_frame = pd.DataFrame(testlist).sort_values(0).reset_index(drop=True)
         if test_frame.iloc[-1][0] == test_frame.iloc[-1].name:

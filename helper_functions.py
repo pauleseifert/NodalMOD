@@ -28,32 +28,29 @@ def merge_timeseries_demand_entsoe(demand, timeseries):
     bus = bus_np[:, ~np.isnan(bus_np).all(axis=0)]
     #bus = pd.DataFrame(bus_np, columns=demand["bus"])
     return pd.DataFrame(bus)
-def append_BHEH(string):
-    if string == "country":
-        return pd.DataFrame([{"COUNTRY": "Bornholm Energy Hub", "CODE": "BHEH", "ID": "34"}])
-    if string == "bus":
-        return pd.DataFrame([{"name":"BHEH", "bus_i": 6127, "baseKV": 400, "zone": 34, "LAT": 55.13615337829421, "LON": 14.898639089359104}])
-    if string == "wind":
-        return pd.DataFrame([{"index": 479, "country": 34, "zone": "BHEH", "bus": 6127, "Pmax": 3000}])
-    # if string == "wind_ts":
-    #     test = wind_ts_bh["electricity"]/15000
-    #     return test
-    if string == "line":
-        return pd.DataFrame({"name": ["BHEH-DE","BHEH-DK2", "BHEH-SE", "BHEH-PL" ], "fbus": [509, 1583, 5497, 4952], "tbus": [6127,6127,6127, 6127], "rateA": [1000, 1000, 1000, 1000]})
 
+#@jit(nopython= True)
+def match_nearest_node(search_lat, search_lon, bus_lat, bus_lon, bus_index):
+    bus_vector = np.empty(search_lat.shape[0], dtype=np.int32)
+    for i in range(search_lat.shape[0]):
+        distance_vector = np.empty(bus_lat.shape[0], dtype=np.float_)
+        for j in range(bus_lat.shape[0]):
+            distance_vector[j] = distance_calc(search_lat[i], search_lon[i], bus_lat[j], bus_lon[j])
+        bus_vector[i] = bus_index[np.argmin(distance_vector)]
+    return bus_vector
 def merge_timeseries_supply(supply, timeseries):
-    supply= supply.groupby("bus").sum(numeric_only = True).reset_index()
-    timeseries_T = timeseries.T
-    timeseries_T.index = timeseries_T.index.astype(int)
-    bus_ts_matrix = supply[["bus"]].merge(timeseries_T, how="left", left_on="bus", right_index=True).drop(['bus'], axis=1).T
-    numpy_bus_ts_matrix = bus_ts_matrix.to_numpy()
-    Pmax = supply["P_inst"].to_numpy()
     @jit(nopython=True)
     def multiplication(numpy_bus_ts_matrix, Pmax):
         bus_np = np.multiply(numpy_bus_ts_matrix, Pmax)
         return bus_np
+    supply= supply.groupby("node").sum(numeric_only = True).reset_index()
+    timeseries_T = timeseries.T
+    timeseries_T.index = timeseries_T.index.astype(int)
+    bus_ts_matrix = supply[["node"]].merge(timeseries_T, how="left", left_on="node", right_index=True).drop(['node'], axis=1).T
+    numpy_bus_ts_matrix = bus_ts_matrix.to_numpy()
+    Pmax = supply["P_inst"].to_numpy()
     bus_np = multiplication(numpy_bus_ts_matrix, Pmax)
-    bus = pd.DataFrame(bus_np, columns=supply["bus"])
+    bus = pd.DataFrame(bus_np, columns=supply["node"])
     return bus
 
 
@@ -233,14 +230,12 @@ def create_ybus_df(lines, busses):
     ybus = -ybus
     return ybus, xbus
 
-def hoesch(lines,bus):
+def line_bus_matrix(lines,bus):
     k_il = np.zeros((len(lines.index), len(bus.index)), dtype=int)
     for i in lines.index:
         k_il[i, lines[lines.index == i]["from"]] = 1
         k_il[i, lines[lines.index == i]["to"]] = -1
-    #b_vector = np.array(1 / lines["x"])
-    #b_lk = np.diag(b_vector)
-    return k_il#, b_lk
+    return k_il
 
 def ren_helper(n, renewables_list):
     if n in renewables_list:
@@ -396,13 +391,6 @@ def conv_scaling_country_specific(generators, scaling_factors, bus_CM):
 
 
 def demand_columns(busses_filtered, load_raw, tyndp_demand):
-    # def get_value(x):
-    #     try:
-    #         return busses_filtered[busses_filtered["old_index"] == x.strip()]["index"].values[0]
-    #     except:
-    #         pass
-
-    #load_raw.columns = load_raw.columns.to_series().apply(get_value)
     demand_T = load_raw.T
     demand_T.index = demand_T.index.to_series().apply(lambda x: x.strip())
     demand_pypsa_merged = demand_T.merge(busses_filtered[["old_index", "bidding_zone"]], how= "inner", left_index = True, right_on= "old_index").drop(["old_index"], axis=1)
@@ -425,7 +413,6 @@ def demand_columns(busses_filtered, load_raw, tyndp_demand):
             scaled_demand = scaled_demand.sort_index(axis=1)
         return scaled_demand
     demand_yearly = {i: yearly_scaling(pypsa_demand_zones=demand_pypsa_merged, tyndp_demand= tyndp_demand, i= i) for i in [0,1,2]}
-    #TODO PL ist komisch -> zu niedrig
     return demand_yearly
 def zones_busses_dam(bus_overview_limited_dam, limited_dam):
     busses_NO = bus_overview_limited_dam[bus_overview_limited_dam["country"] == "NO"]
@@ -458,10 +445,9 @@ def give_nearest_bus_relative_position(bus_raw, hydro_numpy):
         bus_vector[i] = dict_key_list[min(distance_vector, key=distance_vector.get)]
     return bus_vector
 
-def scaling_logic(df_scaled_capacity, tyndp_target, current_value, bz, type):
+def scaling_logic(df_scaled_capacity, tyndp_target, current_value, bz, type, nodes):
     if tyndp_target == 0:
-        df_scaled_capacity.loc[
-            (df_scaled_capacity['bidding_zone'].isin(bz)) & (df_scaled_capacity['type'] == type), "P_inst"] *= 0
+        df_scaled_capacity.loc[(df_scaled_capacity['bidding_zone'].isin(bz)) & (df_scaled_capacity['type'] == type), "P_inst"] *= 0
     elif current_value == 0:
         number_entries = df_scaled_capacity.loc[(df_scaled_capacity['bidding_zone'].isin(bz)) & (df_scaled_capacity['type'] == type)].count()[0]
         df_scaled_capacity.loc[(df_scaled_capacity['bidding_zone'].isin(bz)) & (df_scaled_capacity['type'] == type), "P_inst"] = tyndp_target / number_entries
@@ -531,6 +517,31 @@ def get_wind_yearly(tyndp_values, df_2020_capacity_bz, year, kinis_offshore_wind
 
 def flatten(l):
     return [item for sublist in l for item in sublist]
+
+
+
+def fix_parallel_lines(entry, duplicate_entry, lines):
+    a = lines.loc[entry]
+    b = lines.loc[duplicate_entry]
+    lines.drop(entry, inplace=True)
+    lines.drop(duplicate_entry, inplace=True)
+    new_x = (a["max"] * a["x"] + b["max"] * b["x"]) / (a["max"] + b["max"])
+    new_row= pd.DataFrame({"pmax": a["pmax"]+ b["pmax"], "x":new_x, "from": a["from"].astype(int), "to":a["to"].astype(int), "max":a["max"]+b["max"]}, index=entry)
+    new_lines = pd.concat([lines, new_row])
+    return new_lines.reset_index(drop=True)
+
+def fix_multiple_parallel_lines(entries, lines):
+    if entries.empty:
+        return lines
+    else:
+        relevant_lines = lines.loc[entries]
+        new_x = sum(relevant_lines["max"]*relevant_lines["x"])/sum(relevant_lines["max"])
+        new_row= pd.DataFrame({"pmax": sum(relevant_lines["pmax"]), "x":new_x, "from": relevant_lines.iloc[0]["from"].astype(int), "to":relevant_lines.iloc[0]["to"].astype(int), "max":sum(relevant_lines["max"])}, index=[relevant_lines.iloc[0].name])
+        lines.drop(entries, inplace=True)
+        new_lines = pd.concat([lines, new_row])#.sort_index()
+        return new_lines
+
+
 
 def res_normalisation(self, df, type):
     # grouped_pypsa.loc["NO1", "offwind"] = grouped_pypsa.loc["NO1", "offwind"]+ grouped_pypsa.loc["NO2", "offwind"] + grouped_pypsa.loc["NO5", "offwind"]

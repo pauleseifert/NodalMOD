@@ -16,7 +16,12 @@ numba = "^0.56.4"
 requests = "^2.28.1"
 networkx = "^2.8.8"
 rtree = "^1.0.1"
+openpyxl = "^3.0.10"
+ipython = "^8.6.0"
 
+
+[tool.poetry.group.dev.dependencies]
+autopep8 = "^2.0.0"
 
 [build-system]
 requires = ["poetry-core"]
