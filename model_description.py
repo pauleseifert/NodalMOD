@@ -1,5 +1,6 @@
 import pickle
 import timeit
+
 import geopandas as gpd
 import gurobipy as gp
 import pandas as pd
@@ -7,12 +8,15 @@ from gurobipy import GRB
 from gurobipy import Model
 
 from helper_functions import ren_helper2, demand_helper2, create_encyclopedia
+
 from import_data_object import model_data, run_parameter
 
 starttime = timeit.default_timer()
 
 #load model parameters
+
 run_parameter = run_parameter(scenario_name = "Offshore_Bidding_Zone_Scenario")
+
 run_parameter.create_scenarios()
 data = model_data(create_res = False,reduced_ts = True, export_files= True, run_parameter = run_parameter)
 #self.demand.to_csv("demand.csv")
@@ -177,14 +181,21 @@ C = range(len(L)-len(N)+1) #C_cl_df.index
 I = data.dc_lines[data.dc_lines["EI"].isin(["BHEH", "NSEH1", "NSEH2", "CLUSTER"])].index  # BHEI
 D = data.dc_lines[~data.dc_lines["EI"].isin(["BHEH", "NSEH1", "NSEH2", "CLUSTER"])].index # lines not to the EI's
 
-I = data.dc_lines[data.dc_lines["EI"].isin([0,1,2,3])].index  # BHEI
-D = data.dc_lines[~data.dc_lines["EI"].isin([0,1,2,3])].index # lines not to the EI's
 Z = data.reservoir_zonal_limit.index
 
 #Parameters
 
+
 c = 0
 penalty_curtailment = 100
+
+
+r = 0.04    #zinssatz
+T_line = 40     #Lifetime line
+T_elec = 30     #Lifetime electrolyser
+factor_opex = 0.02       #share of capex for opex each year
+cost_line = 1950         #/MW/km
+dist_line = distance_line(nodes=data.nodes, dc_line_overview=data.dc_lines, index=I)
 
 eff_elec = 0.68
 storage_efficiency = 0.8
@@ -198,8 +209,7 @@ else:
 delta = 8760/full_ts
 
 
-#here I do some dictionary reordering. I want to have all indices as a list given selected bus. If there is none, I want
-# to have an empty list. I call this "encyclopedia"
+#here I do some dictionary reordering.
 encyc_powerplants_bus = create_encyclopedia(data.dispatchable_generators[0]["bus"])
 encyc_storage_bus = create_encyclopedia(data.storage["bus"])
 encyc_DC_from = create_encyclopedia(data.dc_lines["from"])
