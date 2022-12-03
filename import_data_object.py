@@ -36,6 +36,7 @@ class run_parameter:
             self.timesteps = 10
             self.scen = 1
             self.sensitivity_scen = 0
+
             self.scen = 1  # hier szenario 5 erstellen für zonen
             self.sensitivit_scen = 0
         self.solving = False
@@ -49,6 +50,18 @@ class run_parameter:
         #
         self.hours = 504  # 21 representative days
         self.scaling_factor = 8760 / self.hours
+
+        self.solving = False
+        self.reduced_TS = False
+        self.export_model_formulation = self.directory + "results/" + self.case_name + "/model_formulation_scen"+ str(self.scen) +"_subscen" + str(self.sensitivity_scen)+".mps"
+        self.export_folder = self.directory + "results/" + self.case_name + "/" + str(self.scen) + "/" + "subscen" + str(self.sensitivity_scen) + "/"
+        self.import_folder = self.directory + "data/"
+        os.makedirs(self.export_folder, exist_ok=True)
+        #
+        self.hours = 504 #21 representative days
+        self.scaling_factor = 8760 / self.hours
+
+
 
     # je nachdem was oben bei scen eingetragen ist wird hier der case betrachtet
     def create_scenarios(self):
@@ -85,7 +98,7 @@ class run_parameter:
                 print("Stakeholder case")
         #            case 5:  weiteren Case für Bidding Zones erstellen
 
-        # je nachdem was oben bei sensitivity_scen eingetragen ist wird hier der case betrachtet
+
         match self.sensitivity_scen:
             case 0:
                 print("Base scenario sensitivity")
@@ -114,12 +127,18 @@ class run_parameter:
                 self.grid_extension = True
         self.add_future_windcluster = True
         self.EI_bus = pd.DataFrame([
+
             {"country": "BHEH", "y": 55.13615337829421, "x": 14.898639089359104, "p_nom_max": 3000, "bus": "BHEH",
              "carrier": "offwind-dc"},
             {"country": "NSEH1", "y": 55.22300, "x": 3.78700, "p_nom_max": 10000, "bus": "NSEH1",
              "carrier": "offwind-dc"},
             {"country": "NSEH2", "y": 55.69354, "x": 3.97940, "p_nom_max": 10000, "bus": "NSEH2",
              "carrier": "offwind-dc"}], index=["BHEH", "NSEH1", "NSEH2"])
+
+            {"country": "BHEH", "y": 55.13615337829421, "x": 14.898639089359104, "p_nom_max": 3000, "bus": "BHEH", "carrier": "offwind-dc"},
+            {"country": "NSEH1", "y": 55.22300, "x": 3.78700, "p_nom_max": 10000, "bus": "NSEH1", "carrier": "offwind-dc"},
+            {"country": "NSEH2", "y": 55.69354, "x": 3.97940, "p_nom_max": 10000, "bus": "NSEH2", "carrier": "offwind-dc"}], index=["BHEH", "NSEH1", "NSEH2"])
+
         self.added_DC_lines = pd.DataFrame(
             {"p_nom": [1400, 2000, 2000, 700], "length": [720, 267, 400, 300], "index_x": [299, 198, 170, 513],
              "index_y": [419, 111, 93, 116], "tags": [
@@ -136,8 +155,12 @@ class run_parameter:
         self.flexlines_EI = pd.DataFrame(
             {"from": [523, 523, 523, 523, 523, 523, 523, 522, 522, 522, 522, 522, 522, 521, 521, 521, 521],
              "to": [522, 403, 212, 209, 170, 376, 357, 279, 170, 103, 24, 357, 376, 62, 467, 218, 513],
+
              "EI": ["NSEH1", "NSEH1", "NSEH1", "NSEH1", "NSEH1", "NSEH1", "NSEH1", "NSEH2", "NSEH2", "NSEH2", "NSEH2",
                     "NSEH2", "NSEH2", "BHEH", "BHEH", "BHEH", "BHEH"]})
+
+             "EI": ["NSEH1", "NSEH1", "NSEH1", "NSEH1", "NSEH1", "NSEH1", "NSEH1", "NSEH2", "NSEH2", "NSEH2", "NSEH2", "NSEH2", "NSEH2", "BHEH", "BHEH", "BHEH", "BHEH"]})
+
 
         self.TRM = 0.7
         self.country_selection = ['BE', 'CZ', 'DE', 'DK', 'FI', 'NL', 'NO', 'PL', 'SE', 'UK', "NSEH1", "NSEH2", "BHEH"]
@@ -186,6 +209,7 @@ class model_data:
         busses_filtered.columns = ["index", "old_index", "LON", "LAT", "country"]
         self.nodes = busses_filtered
 
+
         # resolve bidding zones in NO and SE and Germany
         if (("NO") or ("SE") or ("DK")) in run_parameter.country_selection:
             self.resolve_bidding_zones()
@@ -224,6 +248,7 @@ class model_data:
         wind_filtered.columns = ["max", "type", "bus", "country", "bidding_zone"]
         wind_filtered = wind_filtered.replace({"onwind": "onwind", "offwind-ac": "offwind", "offwind-dc": "offwind"})
         #solar_filtered.to_csv('solar_filtered.csv')
+
 
         lines_matched = lines_raw.merge(self.nodes[["index", "old_index"]], how="left", left_on="bus0",
                                         right_on="old_index")
@@ -291,8 +316,13 @@ class model_data:
         # BE, FI have no limits on reservoir
         dam_unlimited = dam[dam["country"].isin(["BE", "FI"])]
         dam_limited = dam[~dam["country"].isin(["BE", "FI"])]
+
         dam_limited = dam_limited.groupby(["bus"]).sum(numeric_only=True)[["P_inst"]].reset_index()
         self.reservoir = dam_limited.merge(self.nodes[["country", "bidding_zone"]], left_on="bus", right_index=True)
+
+
+        dam_limited = dam_limited.groupby(["bus"]).sum(numeric_only = True)[["P_inst"]].reset_index()
+        self.reservoir = dam_limited.merge(self.nodes[["country", "bidding_zone"]], left_on = "bus", right_index = True)
 
         def clear_dam_ts(ts_raw, countries):
             target_year = ts_raw[ts_raw["y"] == 2018.0]
@@ -310,8 +340,12 @@ class model_data:
         # RoR
         ror = hydro_df[hydro_df["type"] == "HROR"]
         ror = ror.drop(["pumping_MW", "storage_capacity_MWh"], axis=1)
+
         ror_aggregated = ror.groupby("bus").sum(numeric_only=True)[["P_inst"]].merge(
             self.nodes[["country", "bidding_zone"]], left_index=True, right_index=True)
+
+
+        ror_aggregated = ror.groupby("bus").sum(numeric_only = True)[["P_inst"]].merge(self.nodes[["country", "bidding_zone"]], left_index = True, right_index = True)
 
         def clear_hydro_ts(ts_raw, countries):
             target_year = ts_raw[ts_raw["y"] == 2018.0]
@@ -386,8 +420,12 @@ class model_data:
     def conv_scaling_country_specific(self):  # ??? was macht das?
         conventional_h20 = self.dispatchable_generators[self.dispatchable_generators["type"].isin(["HDAM"])]
         conventional_fossil = self.dispatchable_generators[~self.dispatchable_generators["type"].isin(["HDAM"])]
+
         conventional_fossil_grouped = conventional_fossil.groupby(["bidding_zone", "type"]).sum(numeric_only=True)[
             "P_inst"]
+
+        conventional_fossil_grouped = conventional_fossil.groupby(["bidding_zone", "type"]).sum(numeric_only = True)["P_inst"]
+
 
         tyndp_installed_capacity = self.tyndp_installed_capacity.reset_index()
         # ausgabe
@@ -405,8 +443,12 @@ class model_data:
             new_chp = pd.concat([new_chp, new_entry])
         tyndp_installed_capacity = pd.concat([tyndp_without_chp, new_chp]).reset_index(drop=True)
 
+
         tyndp_installed_capacity_regrouped = tyndp_installed_capacity.groupby(["node", "generator"]).sum(
             numeric_only=True)
+
+        tyndp_installed_capacity_regrouped = tyndp_installed_capacity.groupby(["node", "generator"]).sum(numeric_only = True)
+
 
         def get_conventional_yearly(tyndp_values, df_2020_capacity_bz, df_2020_capacity_bz_grouped, conventional_h20,
                                     year, i, CO2_price):
@@ -537,6 +579,7 @@ class model_data:
         tyndp_installed_capacity = pd.read_csv(path + "/TYNDP/capacity_tyndp2020-v04-al-2022_08_08.csv")
         tyndp_installed_capacity["node"] = tyndp_installed_capacity["node"].str.split("00", expand=True)[0]
         tyndp_installed_capacity["generator"] = tyndp_installed_capacity["generator"].replace({"otherres": "biomass"})
+
         tyndp_installed_capacity = tyndp_installed_capacity.groupby(["node", "generator"]).sum(
             numeric_only=True).reset_index()
         tyndp_installed_capacity["node"] = tyndp_installed_capacity["node"].replace(
@@ -548,6 +591,13 @@ class model_data:
         tyndp_installed_capacity.rename(columns={"ga2030": 2030, "ga2040": 2040, "2020": 2020}, inplace=True)
         tyndp_installed_capacity["country"] = \
         tyndp_installed_capacity.merge(bidding_zone_encyc, left_on="node", right_on="bidding zones")["country"]
+
+        tyndp_installed_capacity = tyndp_installed_capacity.groupby(["node", "generator"]).sum(numeric_only = True).reset_index()
+        tyndp_installed_capacity["node"] = tyndp_installed_capacity["node"].replace({"DKE1": "DK1", "DKW1":"DK2", "NOM1":"NO3", "NON1":"NO4", "NOS0":"NO1", "SE01":"SE1", "SE02":"SE2", "SE03":"SE3", "SE04":"SE4"})
+        tyndp_installed_capacity = tyndp_installed_capacity[tyndp_installed_capacity["node"].isin(["BE", "CZ", "DE", "DK1", "DK2", "NL", "NO1", "NO3", "NO4", "PL", "SE1", "SE2", "SE3", "SE4", "UK", "FI"])].dropna(axis = 1).reset_index(drop=True)
+        tyndp_installed_capacity.rename(columns = {"ga2030": 2030, "ga2040":2040, "2020":2020}, inplace=True)
+        tyndp_installed_capacity["country"] = tyndp_installed_capacity.merge(bidding_zone_encyc, left_on = "node", right_on = "bidding zones")["country"]
+
         tyndp_installed_capacity.set_index(["node", "generator"], inplace=True)
         tyndp_installed_capacity[2035] = (tyndp_installed_capacity[2030] + tyndp_installed_capacity[2040]) / 2
 
@@ -581,13 +631,21 @@ class model_data:
         try:
             import geopandas as gpd
             scandinavian_bidding_zones = gpd.read_file("data/shapes/scandinavian_bidding_zones.geojson").set_index("bidding_zone")
+
         except: sys.exit("Error loading Scandinavian bidding zone shape")
+
+        except: sys.exit("Error loading bidding zone shape")
+
         nodes_geopandas = gpd.GeoDataFrame(self.nodes, geometry=gpd.points_from_xy(self.nodes.LON, self.nodes.LAT), crs="EPSG:4326")
         nodes_scand_bidding_zones = nodes_geopandas.query('country in ["DK", "SE", "NO"]')
         nodes_scand_bidding_zones_resolved = nodes_scand_bidding_zones.sjoin(scandinavian_bidding_zones[["geometry"]], how="left", predicate='intersects').rename(columns={"index_right":"bidding_zone"})
         if nodes_scand_bidding_zones_resolved['bidding_zone'].isna().sum()>=1:
             missing = nodes_scand_bidding_zones_resolved.loc[pd.isna(nodes_scand_bidding_zones_resolved ["bidding_zone"]), :].index
+
             print("not all Scandinavian nodes are matched! " + str(len(missing))+ " are missing")
+
+            print("not all nodes are matched! " + str(len(missing))+ " are missing")
+
             print(missing.values)
 
             # add the missing values
@@ -597,6 +655,7 @@ class model_data:
         nodes_other_bidding_zone = nodes_geopandas[~nodes_geopandas["country"].isin(scandinavian_bidding_zones["country"])]
         nodes_other_bidding_zone["bidding_zone"] = nodes_other_bidding_zone["country"]
         self.nodes= pd.concat([nodes_scand_bidding_zones_resolved, nodes_other_bidding_zone]).drop(columns="geometry").sort_index()
+
 
 #fügt zonen in deutschland ein
     def resolve_german_bidding_zones(self):
@@ -623,6 +682,8 @@ class model_data:
 
         self.nodes = pd.concat([nodes_scand_bidding_zones_resolved, nodes_other_bidding_zone]).drop(
             columns="geometry").sort_index()
+
+
     def extend_overloaded_lines(self, type, case_name):
         # {index, hours_with_overload_in_3_years}
         # base scenario, subscenario 3
@@ -674,10 +735,15 @@ class model_data:
         # attach every of the clusters to a number of onshore points
         # north sea
         for i in range(524, 525):
+
             # print(i)
             additional_dc_lines = pd.concat([additional_dc_lines, pd.DataFrame(
                 {"from": (i, i, i, i, i), "to": (24, 366, 288, 523, 522),
                  "EI": ("CLUSTER", "CLUSTER", "CLUSTER", "CLUSTER", "CLUSTER")})])
+
+            #print(i)
+            additional_dc_lines = pd.concat([additional_dc_lines, pd.DataFrame({"from": (i, i, i, i, i), "to": (24, 366, 288, 523, 522), "EI":("CLUSTER","CLUSTER","CLUSTER","CLUSTER","CLUSTER")})])
+
 
         # Deutschland -> hier nehme ich einfach alle
         additional_node = windfarms[windfarms["Market Zone"] == "DE"]
@@ -689,6 +755,7 @@ class model_data:
         # attach every of the clusters to a number of onshore points
         # north sea
         for i in range(525, 529):
+
             additional_dc_lines = pd.concat([additional_dc_lines, pd.DataFrame(
                 {"from": (i, i, i, i, i), "to": (170, 212, 373, 523, 522),
                  "EI": ("CLUSTER", "CLUSTER", "CLUSTER", "CLUSTER", "CLUSTER")})])
@@ -696,6 +763,12 @@ class model_data:
         for i in range(529, 531):
             additional_dc_lines = pd.concat([additional_dc_lines, pd.DataFrame(
                 {"from": (i, i, i, i), "to": (218, 62, 513, 521), "EI": ("CLUSTER", "CLUSTER", "CLUSTER", "CLUSTER")})])
+
+            additional_dc_lines = pd.concat([additional_dc_lines, pd.DataFrame({"from":(i, i, i, i, i), "to":(170, 212, 373, 523, 522), "EI":("CLUSTER","CLUSTER","CLUSTER","CLUSTER","CLUSTER")})])
+        #baltic
+        for i in range(529, 531):
+            additional_dc_lines = pd.concat([additional_dc_lines, pd.DataFrame({"from":(i, i, i, i), "to":(218, 62, 513, 521), "EI":("CLUSTER","CLUSTER","CLUSTER","CLUSTER")})])
+
 
         # Dänemark
         additional_node = windfarms[windfarms["Market Zone"].isin(["DK1", "DK2"])]
@@ -706,9 +779,13 @@ class model_data:
         # nodes die ich haben möchte
 
         for i in range(543, 544):
+
             additional_dc_lines = pd.concat([additional_dc_lines, pd.DataFrame(
                 {"from": (i, i, i, i, i), "to": (212, 426, 380, 522, 523),
                  "EI": ("CLUSTER", "CLUSTER", "CLUSTER", "CLUSTER", "CLUSTER")})])
+
+            additional_dc_lines = pd.concat([additional_dc_lines, pd.DataFrame({"from": (i, i, i, i,i), "to": (212, 426, 380, 522, 523), "EI":("CLUSTER","CLUSTER","CLUSTER","CLUSTER","CLUSTER")})])
+
 
         # Netherlands
         additional_node = windfarms[windfarms["Market Zone"].isin(["NL"])]
@@ -723,9 +800,13 @@ class model_data:
 
         # new_nodes = pd.concat([new_nodes, additional_node])
         for i in range(531, 534):
+
             additional_dc_lines = pd.concat([additional_dc_lines, pd.DataFrame(
                 {"from": (i, i, i, i, i, i), "to": (376, 357, 265, 366, 522, 523),
                  "EI": ("CLUSTER", "CLUSTER", "CLUSTER", "CLUSTER", "CLUSTER", "CLUSTER")})])
+
+            additional_dc_lines = pd.concat([additional_dc_lines, pd.DataFrame({"from": (i, i, i, i, i, i), "to": (376, 357, 265, 366, 522, 523) , "EI":("CLUSTER","CLUSTER","CLUSTER","CLUSTER","CLUSTER","CLUSTER")})])
+
 
         # UK
         additional_node = windfarms[windfarms["Market Zone"].isin(["UK"])]
@@ -739,6 +820,7 @@ class model_data:
         # plotly_maps_bubbles(df=additional_node, scen=9, maps_folder= location+"kini_locations", name="future_windfarms_locations", unit="GW", size_scale=100,title="findfarms")
 
         for i in range(535, 538):
+
             additional_dc_lines = pd.concat([additional_dc_lines, pd.DataFrame(
                 {"from": (i, i, i, i, i), "to": (300, 292, 307, 522, 523),
                  "EI": ("CLUSTER", "CLUSTER", "CLUSTER", "CLUSTER", "CLUSTER")})])
@@ -746,6 +828,11 @@ class model_data:
             additional_dc_lines = pd.concat([additional_dc_lines, pd.DataFrame(
                 {"from": (i, i, i, i, i, i), "to": (350, 265, 357, 24, 522, 523),
                  "EI": ("CLUSTER", "CLUSTER", "CLUSTER", "CLUSTER", "CLUSTER", "CLUSTER")})])
+                 
+            additional_dc_lines = pd.concat([additional_dc_lines, pd.DataFrame({"from": (i, i, i, i, i), "to": (300, 292, 307, 522, 523), "EI":("CLUSTER","CLUSTER","CLUSTER","CLUSTER","CLUSTER")})])
+        for i in range(538, 543):
+            additional_dc_lines = pd.concat([additional_dc_lines, pd.DataFrame({"from": (i, i, i, i, i, i), "to": (350, 265, 357 ,24, 522, 523), "EI":("CLUSTER","CLUSTER","CLUSTER","CLUSTER","CLUSTER","CLUSTER")})])
+
 
         # Poland
         additional_node = windfarms[windfarms["Market Zone"].isin(["PL"])]
@@ -756,8 +843,11 @@ class model_data:
 
         # new_nodes = pd.concat([new_nodes, additional_node])
         for i in range(534, 535):
+
             additional_dc_lines = pd.concat([additional_dc_lines, pd.DataFrame(
                 {"from": (i, i, i, i), "to": (470, 518, 62, 521), "EI": ("CLUSTER", "CLUSTER", "CLUSTER", "CLUSTER")})])
+            additional_dc_lines = pd.concat([additional_dc_lines, pd.DataFrame({"from": (i, i, i, i), "to": (470, 518, 62, 521), "EI":("CLUSTER","CLUSTER","CLUSTER","CLUSTER")})])
+
 
         new_dc_lines = pd.concat([self.dc_lines, additional_dc_lines])
 
@@ -771,11 +861,18 @@ class model_data:
 class kpi_data:
     def __init__(self, run_parameter, scen):
         self.run_parameter = run_parameter
+
         self.run_parameter.years = range(0, run_parameter.years)
         years = self.run_parameter.years
 
         read_folder = run_parameter.read_folder = run_parameter.directory + "results/" + run_parameter.case_name + "/" + str(
             scen) + "/subscen" + str(run_parameter.sensitivity_scen) + "/"
+
+        self.run_parameter.years=range(0,run_parameter.years)
+        years = self.run_parameter.years
+
+        read_folder = run_parameter.read_folder = run_parameter.directory + "results/" + run_parameter.case_name + "/" + str(scen) + "/subscen" +str(run_parameter.sensitivity_scen) + "/"
+
         self.bus = pd.read_csv(read_folder + "busses.csv", index_col=0)
 
         # create empty objects
@@ -910,8 +1007,11 @@ class kpi_data:
         self.curtailment.bz_relative_sum = pd.DataFrame(self.curtailment.bz_sum[0] / self.P_R.max.bz_sum[0]).rename(
             {0: "relative"}, axis=1)
         self.curtailment.location_sum = self.prepare_results_files_nodes(self.curtailment.sum, bus_raw, temporal=0)
+
         self.curtailment.location = self.dataframe_creator(run_parameter=run_parameter, dict=self.curtailment.raw,
                                                            bus_raw=bus_raw)
+        self.curtailment.location = self.dataframe_creator(run_parameter = run_parameter, dict = self.curtailment.raw, bus_raw = bus_raw)
+
 
         # further calculations
         ##overloaded lines -> > 70% load über die ganze periode, base case
@@ -920,6 +1020,7 @@ class kpi_data:
                 overloaded_AC = self.line_loading.AC["avg"][self.line_loading.AC["avg"]["full_load_h"] >= 0.7 * 504][
                     "full_load_h"]
                 overloaded_AC = overloaded_AC * 3
+
                 overloaded_AC.to_csv(run_parameter.export_folder + str(1) + "/subscen" + str(
                     run_parameter.sensitivity_scen) + "/overloaded_lines_AC.csv")
                 overloaded_DC = self.line_loading.DC["avg"][self.line_loading.DC["avg"]["full_load_h"] >= 0.7 * 504][
@@ -929,6 +1030,14 @@ class kpi_data:
                     run_parameter.sensitivity_scen) + "/overloaded_lines_DC.csv")
             except:
                 pass
+
+                overloaded_AC.to_csv(run_parameter.export_folder + str(1) +"/subscen" + str(run_parameter.sensitivity_scen) + "/overloaded_lines_AC.csv")
+                overloaded_DC = self.line_loading.DC["avg"][self.line_loading.DC["avg"]["full_load_h"] >= 0.7 * 504]["full_load_h"]
+                overloaded_DC = overloaded_DC * 3
+                overloaded_DC.to_csv(run_parameter.export_folder + str(1) + "/subscen" + str(run_parameter.sensitivity_scen) + "/overloaded_lines_DC.csv")
+            except:pass
+
+
 
     def dataframe_creator(self, run_parameter, dict, bus_raw):
         df = pd.DataFrame({year: dict[year].sum(axis=0) for year in run_parameter.years}).replace(0, np.nan).dropna(
@@ -1035,11 +1144,17 @@ class kpi_data:
         self.run_parameter.create_scenarios()
         for EI in self.run_parameter.EI_bus.index:
             data_ei_individual = data_ei_matched[data_ei_matched["EI"] == EI]
+            
             data_ei_from_bus = data_ei_individual.merge(lines_DC_overview[["from"]], how="left", left_index=True,
                                                         right_index=True).set_index("from")
             data_ei_from_country = data_ei_from_bus.merge(bus_overview["country"], how="left", left_index=True,
                                                           right_index=True).set_index("country")
             aggregated_trade = data_ei_from_country.groupby("country", axis=0).sum(numeric_only=True)
+
+            data_ei_from_bus = data_ei_individual.merge(lines_DC_overview[["from"]], how="left", left_index=True,right_index=True).set_index("from")
+            data_ei_from_country = data_ei_from_bus.merge(bus_overview["country"], how="left", left_index=True,right_index=True).set_index("country")
+            aggregated_trade = data_ei_from_country.groupby("country", axis=0).sum(numeric_only = True)
+
             trade_to_bz.update({EI: aggregated_trade.iloc[:, :self.timesteps]})
         return trade_to_bz
 
@@ -1066,9 +1181,14 @@ class kpi_data:
         # trade_balance_bz_total  = trade_balance_bz_total.merge(bidding_zones_encyclopedia, how="left", left_on="bidding zone_from",right_on="zone_number")[["bidding zones", "bidding zone_to", 0]].rename(columns={"bidding zones": "From bidding zone"})
         trade_balance_bz_total = trade_balance_bz_total.sort_values("country_to", axis=0)
         trade_balance_bz_total[0] = trade_balance_bz_total[0] * scaling_factor
+
         # exports - imports -> yes that is correct in the equation -> from defines where it starts == what country exports
         zonal_trade_balance = trade_balance_bz_total.groupby("country_from").sum(numeric_only=True).sub(
             trade_balance_bz_total.groupby("country_to").sum(numeric_only=True), fill_value=0)
+
+        #exports - imports -> yes that is correct in the equation -> from defines where it starts == what country exports
+        zonal_trade_balance = trade_balance_bz_total.groupby("country_from").sum(numeric_only=True).sub(trade_balance_bz_total.groupby("country_to").sum(numeric_only = True), fill_value=0)
+
         return zonal_trade_balance
 
     def trade_balance(self, AC_balance, DC_balance):
@@ -1108,9 +1228,11 @@ class kpi_data:
             CAP_BH.columns = CAP_BH.columns.astype(int)
             for i in CAP_BH.index:
                 index_file["max"].iat[int(i)] = CAP_BH.loc[i][0]
-        file_without_0 = line_data[line_data != 0].dropna(axis=1, how="all").abs()
+
+        file_without_0 = line_data[line_data != 0].dropna(axis= 1, how="all").abs()
         max_power = index_file[index_file.index.isin(line_data.columns)]["max"]
-        max_power_filtered = max_power[(max_power != 0.0)]
+        max_power_filtered = max_power[(max_power!=0.0)]
+
         relative = file_without_0.divide(max_power_filtered, axis=1)
         avg = relative.mean(axis=0).to_frame().fillna(0)
         avg["full_load_h"] = relative[relative > 1.0 - full_load_tolerance].count()
@@ -1244,6 +1366,7 @@ class gurobi_variables:
             pd.DataFrame(self.results["F_AC"][y, :, :]).to_csv(folder + str(y) + "_F_AC.csv")
             # DC line flow
             pd.DataFrame(self.results["F_DC"][y, :, :]).to_csv(folder + str(y) + "_F_DC.csv")
+
 # class shapes:
 #    def __init__(self):
 
@@ -1265,3 +1388,8 @@ class gurobi_variables:
 #            pd.DataFrame(self.results["F_AC"][y, :, :]).to_csv(folder + str(y) + "_F_AC.csv")
 #            # DC line flow
 #            pd.DataFrame(self.results["F_DC"][y, :, :]).to_csv(folder + str(y) + "_F_DC.csv")
+
+#class shapes:
+#    def __init__(self):
+
+

@@ -129,3 +129,4 @@ else:
 for scen in scenarios: plotly_maps_lines(P_flow=kpis[scen].line_loading.AC["avg"], P_flow_DC= kpis[scen].line_loading.DC["avg"], bus=kpis[scen].bus,  scen=scen, maps_folder=scen_folder)
 for scen in scenarios: plotly_maps_lines_hours(P_flow=kpis[scen].line_loading.AC["avg"], P_flow_DC= kpis[scen].line_loading.DC["avg"], bus=kpis[scen].bus, scen=scen, maps_folder=scen_folder, timesteps=run_parameter.timesteps)
 for scen in scenarios: plotly_maps_size_lines(P_flow=kpis[scen].line_loading.AC, P_flow_DC = kpis[scen].line_loading.DC, CAP_lines=kpis[scen].CAP_lines , bus=kpis[scen].bus, scen=scen, year=2,  maps_folder=scen_folder, zoom = 1.25, offset = -4)
+
