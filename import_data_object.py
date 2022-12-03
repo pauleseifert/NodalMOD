@@ -196,12 +196,14 @@ class model_data:
 
         # cleaning the conventional plants
         generators = pd.concat([generators_raw, run_parameter.EI_bus[["p_nom_max", "bus", "carrier"]]])
+
         generators_matched = generators.merge(self.nodes[["index", "old_index", "country", "bidding_zone"]], how="left",
                                               left_on="bus", right_on="old_index")
         #hier nach summieren
         generators_filtered = generators_matched[
             generators_matched['index'].notnull()]  # take only the ones that are in the countries we want to have
         generators_filtered["index"] = generators_filtered["index"].astype(int)
+        generators_filtered.to_csv("generators_filtered.csv")
 
         conventionals_filtered = generators_filtered[
             generators_filtered["carrier"].isin(["CCGT", "OCGT", "nuclear", "biomass", "coal", "lignite", "oil"])]
@@ -617,6 +619,11 @@ class model_data:
         nodes_other_bidding_zone["bidding_zone"] = nodes_other_bidding_zone["country"]
         self.nodes= pd.concat([nodes_german_bidding_zones_resolved, nodes_other_bidding_zone]).drop(columns="geometry").sort_index()
 
+
+
+
+        self.nodes = pd.concat([nodes_scand_bidding_zones_resolved, nodes_other_bidding_zone]).drop(
+            columns="geometry").sort_index()
 
 
         self.nodes = pd.concat([nodes_scand_bidding_zones_resolved, nodes_other_bidding_zone]).drop(

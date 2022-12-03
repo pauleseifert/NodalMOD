@@ -7,33 +7,19 @@ from gurobipy import GRB
 from gurobipy import Model
 
 from helper_functions import ren_helper2, demand_helper2, create_encyclopedia
-from import_object_data_Zonal_Configuration import model_data, run_parameter
+from import_data_object import model_data, run_parameter
 
 starttime = timeit.default_timer()
 
 #load model parameters
-run_parameter= run_parameter(scenario_name = "Offshore_Bidding_Zone_Scenario")
+run_parameter = run_parameter(scenario_name = "Offshore_Bidding_Zone_Scenario")
 run_parameter.create_scenarios()
 data = model_data(create_res = False,reduced_ts = True, export_files= True, run_parameter = run_parameter)
+#self.demand.to_csv("demand.csv")
 
-data.demand[0].to_csv(r'C:\Users\marie\Documents\NTNU\Specialization Project\DataFrames Model\demand.csv', index=False)
-data.ac_lines.to_excel(r'C:\Users\marie\Documents\NTNU\Specialization Project\DataFrames Model\ac_lines.xlsx', index=False)
-data.dc_lines.to_excel(r'C:\Users\marie\Documents\NTNU\Specialization Project\DataFrames Model\dc_lines.xlsx', index=False)
-data.dispatchable_generators[0].to_csv(r'C:\Users\marie\Documents\NTNU\Specialization Project\DataFrames Model\dispatchable_generators.csv', index=False)
-data.nodes.to_excel(r'C:\Users\marie\Documents\NTNU\Specialization Project\DataFrames Model\nodes.xlsx', index=False)
-data.res_series[0].to_excel(r'C:\Users\marie\Documents\NTNU\Specialization Project\DataFrames Model\res_series.xlsx', index=False)
-data.reservoir.to_excel(r'C:\Users\marie\Documents\NTNU\Specialization Project\DataFrames Model\reservoir.xlsx', index=False)
-data.reservoir_zonal_limit.to_excel(r'C:\Users\marie\Documents\NTNU\Specialization Project\DataFrames Model\reservoir_zonal_limit.xlsx', index=False)
-data.ror_series.to_excel(r'C:\Users\marie\Documents\NTNU\Specialization Project\DataFrames Model\ror_series.xlsx', index=False)
-data.storage.to_excel(r'C:\Users\marie\Documents\NTNU\Specialization Project\DataFrames Model\storage.xlsx', index=False)
 
-df_demand=data.demand[0]
-print(df_demand)
+#data.demand[0].to_csv(r'C:\Users\marie\Documents\NTNU\Specialization Project\DataFrames Model\demand.csv', index=False)
 
-#TODO:
-
-#TODO: aufbau und structure mit paul duchgehen (runparameter funktionen und scen)
-#TODO: einlesen der nodes to zones mit unterschiedlichen scenarien
 #TODO: welche Daten fehlen? im Overleaf den Data Teil schreiben (structure)
 #TODO: diskutieren ob es wirklich nötig ist die Nordics mit in das Model mit aufzunhemen (Paul meinte wegen Wasser Zeugs)
 #TODO: Recherche Flexilines - was für Caps für die NTCs nehmen wir?
