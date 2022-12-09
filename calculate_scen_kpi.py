@@ -7,7 +7,7 @@ from printing_funct import plot_bar2_electrolyser, kpi_development2, radar_chart
     plotly_maps_lines, plotly_maps_size_lines, plotly_maps_lines_hours
 
 #list of scenarios to calculate
-scenarios = [1]
+#scenarios = [1]
 run_parameter = run_parameter(scenario_name="Energy_island_scenario")
 kpis = {scen : kpi_data(run_parameter = run_parameter, scen= scen) for scen in scenarios}
 

@@ -34,7 +34,7 @@ class run_parameter:
             self.case_name = scenario_name
             self.years = 1
             self.timesteps = 10
-            self.scen = "BZ2"
+            self.scen = "BZ5"
             self.sensitivity_scen = 0
         self.solving = False
         self.reduced_TS = False
@@ -112,7 +112,7 @@ class model_data:
         #df_demand_merged = df_demand_final.merge(df_nodes, on="index",how='left')
 
         #reading in generation CONV
-        self.dispatchable = pd.read_excel("data\\final_readin_data\\dispatachable.xlsx")
+#       self.dispatchable = pd.read_excel("data\\final_readin_data\\dispatachable.xlsx")
         #generators = pd.read_csv("data\import_data\generators_filtered.csv", sep=";", index_col=0)
         #df_generators = pd.read_csv("data\\import_data\\generators_filtered_v2_gerettet.csv", sep=",", index_col=0)
         #df_generators_merged = df_nodes.merge(df_generators[['index', 'p_nom', 'carrier', 'marginal_cost', 'efficiency']], on="index",how='left')
@@ -131,6 +131,10 @@ class model_data:
     #Reading in res series  timeseries einlesen für wind und solar! mit ninja.renewables - ist jetzt von Paul
         self.res_series = pd.read_excel("data\\final_readin_data\\res_series.xlsx")
 
+    #Readin in conventional
+        self.dispatchable = pd.read_excel("data\\final_readin_data\\dispatchable.xlsx")
+    #Readin run of river
+        self.ror_series = pd.read_excel("data\\final_readin_data\\ror_series.xlsx")
         #old
         #2) solar_filtered
         #solar_raw = pd.read_csv("data\\import_data\\solar_filtered.csv", sep=";", index_col=0)

@@ -258,11 +258,20 @@ def demand_helper(j,t, nodes_col, nodes_dict):
         return nodes_dict[j][t]
     else:
         return 0
-def demand_helper2(j,t,y, nodes_dict):
+
+
+def demand_helper2(j,t, nodes_dict):
     if j in nodes_dict[y]:
         return nodes_dict[y][j][t]
     else:
         return 0
+
+
+#def demand_helper2(j,t,y, nodes_dict):
+#    if j in nodes_dict[y]:
+#        return nodes_dict[y][j][t]
+#    else:
+#        return 0
 def create_encyclopedia(data_series: object) -> object:
     mydict = data_series.to_dict()
     newd = collections.defaultdict(list)
