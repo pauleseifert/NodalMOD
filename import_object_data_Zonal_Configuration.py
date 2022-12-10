@@ -37,7 +37,7 @@ class run_parameter:
             self.scen = "BZ5"
             self.sensitivity_scen = 0
         self.solving = False
-        self.reduced_TS = False
+        self.reduced_TS = True
         self.export_model_formulation = self.directory + "results/" + self.case_name + "/model_formulation_scen" + str(
             self.scen) + "_subscen" + str(self.sensitivity_scen) + ".mps"
         self.export_folder = self.directory + "results/" + self.case_name + "/" + str(
@@ -149,13 +149,56 @@ class model_data:
         self.storage = pd.read_excel("data\\final_readin_data\\storage.xlsx")
         self.reservoir = pd.read_excel("data\\final_readin_data\\reservoir.xlsx")
 
+########################
+##reduced time series##
+#######################
+
+        if reduced_ts:
+#            try:
+                u = pd.read_csv(run_parameter.import_folder + "poncelet/u_result.csv", index_col=0)
+                u_index = u.index[u["value"] == 1.0].to_list()
+                self.timesteps_reduced_ts = 24 * len(u_index)
+#            except:
+#                sys.exit("need to run poncelet algorithm first!")
+#            self.res_series = {i: self.reduce_timeseries(self.res_series[i], u_index) for i in [0, 1, 2]}
+#            self.demand = {i: self.reduce_timeseries(self.demand[i], u_index) for i in [0, 1, 2]}
+#            self.share_solar = {i: self.reduce_timeseries(self.share_solar[i], u_index) for i in [0, 1, 2]}
+#            self.share_wind = {i: self.reduce_timeseries(self.share_wind[i], u_index) for i in [0, 1, 2]}
+#            self.ror_series = self.reduce_timeseries(self.ror_series, u_index)
+#            self.reservoir_zonal_limit = self.reduce_timeseries(limited_dam_ts, u_index)
+
+#        self.reservoir_zonal_limit = self.reservoir_zonal_limit.sum()
+#        self.dispatchable_generators = self.conv_scaling_country_specific()
+#        if run_parameter.add_future_windcluster:
+#            self.add_future_windcluster(location=run_parameter.import_folder)
+
+        # Netzausbau
+ #       if run_parameter.grid_extension:
+ #           self.extend_overloaded_lines(type="AC", case_name=run_parameter.case_name)
+ #           self.extend_overloaded_lines(type="DC", case_name=run_parameter.case_name)
+ #       if export_files:
+ #           with open(run_parameter.export_folder + 'powerplants.pkl', 'wb+') as f:
+ #               pickle.dump(self.dispatchable_generators, f)
+ #           with open(run_parameter.export_folder + 'demand.pkl', 'wb+') as f:
+ #               pickle.dump(self.demand, f)
+ #           with open(run_parameter.export_folder + 'P_max.pkl', 'wb+') as f:
+ #               pickle.dump(self.res_series, f)
+
+    def reduce_timeseries(self, long_ts, u_index):
+        short_ts = pd.DataFrame()
+        for index in u_index:
+            current_day = long_ts.loc[index * 24:index * 24 + 23]
+            short_ts = pd.concat([short_ts, current_day])
+        return short_ts.reset_index(drop=True)
+
 #hier muss jetzt noch gekürzt werden im Script KPI_data
 class kpi_data:
-    def __init__(self, run_parameter, scen):
+    def __init__(self, run_parameter):
         self.run_parameter = run_parameter
         self.run_parameter.years = range(0, run_parameter.years)
         years = self.run_parameter.years
 
+        #todo hier namen des folders eingeben, der die variablen enthält:
         read_folder = run_parameter.read_folder = run_parameter.directory + "results/" + run_parameter.case_name + "/" + str(
             scen) + "/subscen" + str(run_parameter.sensitivity_scen) + "/"
         self.bus = pd.read_csv(read_folder + "busses.csv", index_col=0)
@@ -527,4 +570,105 @@ class comparison_data():
             if value.hasnans == False:
                 non_na.update({key: value})
                 self.yearly_sum.update({key: value.sum() / 4})
+
+class gurobi_variables:
+    def __init__(self, solved_model):
+        all_variables = solved_model.getVars()
+        last_item = all_variables[-1].VarName.split(",")
+        self.years = int(last_item[0].split("[")[1]) + 1
+        self.timesteps = int(last_item[0]) + 1
+#        self.years = 1
+#        self.timesteps = 10
+        counter = len(all_variables) - 1
+        self.additional_columns = {}
+        self.results = {}
+        while counter > 0:
+            current_variable = all_variables[counter].VarName
+            variable_name = current_variable.split("[")[0]
+            array, counter, irregular_columns, bus_column_irregular = self.get_variable_from_position(
+                variables=all_variables, counter=counter)
+            self.results.update({variable_name: array})
+            if irregular_columns:
+                bus_column_irregular.reverse()
+                self.additional_columns.update({variable_name: bus_column_irregular})
+
+    def get_variable_from_position(self, variables, counter):
+        current_variable = variables[counter].VarName
+        bus_column_irregular = []
+        irregular_columns = False
+        first_run = True
+        if len(current_variable.split(",")) == 3:
+            first_dimension = int(current_variable.split(",")[0].split("[")[1]) + 1
+            second_dimension = int(current_variable.split(",")[1]) + 1
+            last_dimension = int(current_variable.split(",")[-1].split("]")[0]) + 1
+            dimension_counter = 1
+            while dimension_counter < last_dimension:
+                if int(variables[counter - dimension_counter].VarName.split(",")[-1].split("]")[0]) == int(
+                        variables[counter].VarName.split(",")[-1].split("]")[0]):
+                    irregular_columns = True
+                    break
+                dimension_counter += 1
+            array = np.zeros((first_dimension, second_dimension, dimension_counter))
+            for first in reversed(range(first_dimension)):
+                for second in reversed(range(second_dimension)):
+                    for third in reversed(range(dimension_counter)):
+                        array[first, second, third] = variables[counter].X
+                        if first_run:
+                            bus_column_irregular.append(int(variables[counter].VarName.split(",")[-1].split("]")[0]))
+                        counter -= 1
+                    first_run = False
+        if len(current_variable.split(",")) == 2:
+            first_dimension = int(current_variable.split(",")[0].split("[")[1]) + 1
+            last_dimension = int(current_variable.split(",")[-1].split("]")[0]) + 1
+            dimension_counter = 1
+            while dimension_counter < last_dimension:
+                if int(variables[counter - dimension_counter].VarName.split(",")[-1].split("]")[0]) == int(
+                        variables[counter].VarName.split(",")[-1].split("]")[0]):
+                    irregular_columns = True
+                    break
+                dimension_counter += 1
+            array = np.zeros((first_dimension, dimension_counter))
+            for first in reversed(range(first_dimension)):
+                for third in reversed(range(dimension_counter)):
+                    array[first, third] = variables[counter].X
+                    if first_run:
+                        bus_column_irregular.append(int(variables[counter].VarName.split(",")[-1].split("]")[0]))
+                    counter -= 1
+                first_run = False
+        if len(current_variable.split(",")) == 1:
+            print("Error!")
+        return array, counter, irregular_columns, bus_column_irregular
+
+    def export_csv(self, folder, scen):
+        os.makedirs(folder, exist_ok=True)
+        # cap_BH
+        pd.DataFrame(self.results["cap_BH"], columns=self.additional_columns["cap_BH"]).to_csv(folder + "cap_BH.csv")
+        for y in range(self.years):
+            # P_C
+            pd.DataFrame(self.results["P_C"][y, :, :]).to_csv(folder + str(y) + "_P_C.csv")
+            # P_R
+            pd.DataFrame(self.results["P_R"][y, :, :], columns=self.additional_columns["P_R"]).to_csv(
+                folder + str(y) + "_P_R.csv")
+            # P_DAM
+            pd.DataFrame(self.results["P_DAM"][y, :, :]).to_csv(folder + str(y) + "_P_DAM.csv")
+            if scen in [2, 3, 4]:
+                # cap_E
+                pd.DataFrame(self.results["cap_E"]).to_csv(folder + "cap_E.csv")
+                # P_H
+                pd.DataFrame(self.results["P_H"][y, :, :]).to_csv(folder + str(y) + "_P_H.csv")
+            # load lost
+            pd.DataFrame(self.results["p_load_lost"][y, :, :]).to_csv(folder + str(y) + "_p_load_lost.csv")
+            # res_curtailment
+            pd.DataFrame(self.results["res_curtailment"][y, :, :],
+                         columns=self.additional_columns["res_curtailment"]).to_csv(
+                folder + str(y) + "_res_curtailment.csv")
+            # storage
+            pd.DataFrame(self.results["P_S"][y, :, :]).to_csv(folder + str(y) + "_P_S.csv")
+            pd.DataFrame(self.results["C_S"][y, :, :]).to_csv(folder + str(y) + "_C_S.csv")
+            pd.DataFrame(self.results["L_S"][y, :, :]).to_csv(folder + str(y) + "_L_S.csv")
+            # AC line flow
+            pd.DataFrame(self.results["F_AC"][y, :, :]).to_csv(folder + str(y) + "_F_AC.csv")
+            # DC line flow
+            pd.DataFrame(self.results["F_DC"][y, :, :]).to_csv(folder + str(y) + "_F_DC.csv")
+
 

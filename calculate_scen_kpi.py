@@ -2,14 +2,15 @@ import os
 
 import pandas as pd
 
-from import_data_object import kpi_data, run_parameter
+from import_object_data_Zonal_Configuration import kpi_data, run_parameter
 from printing_funct import plot_bar2_electrolyser, kpi_development2, radar_chart, plot_generation, plotly_maps_bubbles, \
     plotly_maps_lines, plotly_maps_size_lines, plotly_maps_lines_hours
 
 #list of scenarios to calculate
 #scenarios = [1]
-run_parameter = run_parameter(scenario_name="Energy_island_scenario")
-kpis = {scen : kpi_data(run_parameter = run_parameter, scen= scen) for scen in scenarios}
+run_parameter = run_parameter(scenario_name="Offshore_Bidding_Zone_Scenario")
+kpis = kpi_data(run_parameter = run_parameter )#, scen= scen) for scen in scenarios}
+#kpis = {scen : kpi_data(run_parameter = run_parameter, scen= scen) for scen in scenarios}
 
 #scenario spanning analysis
 scen_folder = run_parameter.export_folder +"maps/sensitivity" +str(run_parameter.sensitivity_scen)+"/"
