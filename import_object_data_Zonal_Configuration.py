@@ -30,7 +30,7 @@ class run_parameter:
             self.sensitivity_scen = int(sys.argv[5])
         # local execution parameters
         elif (platform == "darwin") or (platform == "win32"):
-            self.directory = "" #directory anpassen
+            self.directory = ""
             self.case_name = scenario_name
             self.years = 1
             self.timesteps = 10
@@ -154,12 +154,12 @@ class model_data:
 #######################
 
         if reduced_ts:
-#            try:
+            try:
                 u = pd.read_csv(run_parameter.import_folder + "poncelet/u_result.csv", index_col=0)
                 u_index = u.index[u["value"] == 1.0].to_list()
                 self.timesteps_reduced_ts = 24 * len(u_index)
-#            except:
-#                sys.exit("need to run poncelet algorithm first!")
+            except:
+                sys.exit("need to run poncelet algorithm first!")
 #            self.res_series = {i: self.reduce_timeseries(self.res_series[i], u_index) for i in [0, 1, 2]}
 #            self.demand = {i: self.reduce_timeseries(self.demand[i], u_index) for i in [0, 1, 2]}
 #            self.share_solar = {i: self.reduce_timeseries(self.share_solar[i], u_index) for i in [0, 1, 2]}
@@ -575,10 +575,10 @@ class gurobi_variables:
     def __init__(self, solved_model):
         all_variables = solved_model.getVars()
         last_item = all_variables[-1].VarName.split(",")
-        self.years = int(last_item[0].split("[")[1]) + 1
-        self.timesteps = int(last_item[0]) + 1
-#        self.years = 1
-#        self.timesteps = 10
+#        self.years = int(last_item[0].split("[")[1]) + 1
+#        self.timesteps = int(last_item[0]) + 1
+        self.years = 1
+        self.timesteps = 10
         counter = len(all_variables) - 1
         self.additional_columns = {}
         self.results = {}
@@ -597,6 +597,7 @@ class gurobi_variables:
         bus_column_irregular = []
         irregular_columns = False
         first_run = True
+        x = len(current_variable)
         if len(current_variable.split(",")) == 3:
             first_dimension = int(current_variable.split(",")[0].split("[")[1]) + 1
             second_dimension = int(current_variable.split(",")[1]) + 1

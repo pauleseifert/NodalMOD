@@ -19,12 +19,12 @@ data = model_data(create_res = False,reduced_ts = True, export_files= True, run_
 ###################################
 
 #Dispatchable
-data.dispatchable['Total Capacity'] = data.dispatchable.groupby([run_parameter.scen, 'type'])['P_inst'].transform('sum')
+data.dispatchable['Total_Capacity'] = data.dispatchable.groupby([run_parameter.scen, 'type'])['P_inst'].transform('sum')
 final_dispatchable = data.dispatchable.drop_duplicates(subset=[run_parameter.scen, 'type'])
 final_dispatchable= final_dispatchable.sort_values(run_parameter.scen)
 
 #reservoir
-data.reservoir['Total Capacity'] = data.reservoir.groupby([run_parameter.scen])['P_inst'].transform('sum')
+data.reservoir['Total_Capacity'] = data.reservoir.groupby([run_parameter.scen])['P_inst'].transform('sum')
 final_reservoirs = data.reservoir.drop_duplicates(subset=[run_parameter.scen])
 final_reservoirs = final_reservoirs.sort_values(run_parameter.scen)
 
@@ -66,7 +66,7 @@ Y_extra = range(1, run_parameter.years)
 Z = data.nodes[run_parameter.scen].unique()
 G = final_dispatchable['type'].unique()
 R = final_res_series.columns
-DAM = final_reservoirs[[run_parameter.scen, 'Total Capacity']].set_index(run_parameter.scen)
+DAM = final_reservoirs[[run_parameter.scen, 'Total_Capacity']].set_index(run_parameter.scen)
 S = final_storage.index
 F = data.ntc_BZ5.index
 
@@ -79,14 +79,14 @@ storage_penalty = 0.1
 marginal_costs = final_dispatchable.set_index('type').to_dict()['mc']
 #eff_elec = 0.68
 l_s_max = final_storage.to_dict()['capacity']
-p_g_max = final_dispatchable[['type', 'Total Capacity', run_parameter.scen]] #.set_index(run_parameter.scen)
+p_g_max = final_dispatchable[['type', 'Total_Capacity', run_parameter.scen]] #.set_index(run_parameter.scen)
 
 def dispatchable_help(zone,disp):
     result = p_g_max.loc[p_g_max[run_parameter.scen] == zone]
     result = result.set_index('type')
     del result[run_parameter.scen]
     if disp in result.index:
-        x = result.at[disp, 'Total Capacity']
+        x = result.at[disp, 'Total_Capacity']
         return x
     else:
         x = 0
@@ -94,7 +94,7 @@ def dispatchable_help(zone,disp):
 
 def reservoir_help(generationZone):
     if generationZone in final_reservoirs.index:
-        x = final_reservoirs.at[generationZone, 'Total Capacity']
+        x = final_reservoirs.at[generationZone, 'Total_Capacity']
         return x
     else:
         x = 0
@@ -118,8 +118,8 @@ def ror_help(t,z):
 
 
 
-final_dispatchable['Min Capacity'] = final_dispatchable['Total Capacity'].mul(0.2)
-p_g_min = final_dispatchable[['type', 'Min Capacity', run_parameter.scen]].set_index([run_parameter.scen])
+final_dispatchable['Min_Capacity'] = final_dispatchable['Total_Capacity'].mul(0.2)
+p_g_min = final_dispatchable[['type', 'Min_Capacity', run_parameter.scen]].set_index([run_parameter.scen])
 p_r_max = R
 p_s_max_in = final_storage.to_dict()['Pmax_in']
 p_s_max_out = final_storage.to_dict()['Pmax_out']
