@@ -24,10 +24,8 @@ numba = "*"
 openpyxl = "*"
 geopandas = "*"
 rtree = "*"
-<<<<<<< Updated upstream
 pygeos = "*"
-=======
->>>>>>> Stashed changes
+
 
 [dev-packages]
 
