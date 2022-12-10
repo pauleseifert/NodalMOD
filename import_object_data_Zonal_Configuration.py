@@ -577,8 +577,8 @@ class gurobi_variables:
         restults_df = pd.DataFrame(data = all_variables)
         restults_df.to_excel("output.xlsx")
         last_item = all_variables[-1].VarName.split(",")
-#        self.years = int(last_item[0].split("[")[1]) + 1
-#        self.timesteps = int(last_item[0]) + 1
+        self.years = int(last_item[0].split("[")[1]) + 1
+        self.timesteps = int(last_item[0]) + 1
         self.years = 1
         self.timesteps = 10
         counter = len(all_variables) - 1

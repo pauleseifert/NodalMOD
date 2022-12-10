@@ -14,9 +14,6 @@ run_parameter = run_parameter(scenario_name = "Offshore_Bidding_Zone_Scenario")
 run_parameter.create_scenarios()
 data = model_data(create_res = False,reduced_ts = True, export_files= True, run_parameter = run_parameter)
 
-###################################
-###Sum up values for each zone####
-###################################
 
 #Dispatchable
 data.dispatchable['Total_Capacity'] = data.dispatchable.groupby([run_parameter.scen, 'type'])['P_inst'].transform('sum')
