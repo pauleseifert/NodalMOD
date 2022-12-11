@@ -199,9 +199,8 @@ class kpi_data:
         years = self.run_parameter.years
 
         #todo hier namen des folders eingeben, der die variablen enthält:
-        read_folder = run_parameter.read_folder = run_parameter.directory + "results/" + run_parameter.case_name + "/" + str(
-            scen) + "/subscen" + str(run_parameter.sensitivity_scen) + "/"
-        self.bus = pd.read_csv(read_folder + "busses.csv", index_col=0)
+        read_folder = run_parameter.read_folder = run_parameter.directory + "results/" + run_parameter.case_name + "/" + str(run_parameter.scen) + "/subscen" + str(run_parameter.sensitivity_scen) + "/"
+        self.bus = pd.read_csv(read_folder + "zones.csv", index_col=0)
 
         # create empty objects
         self.load_factor = Myobject()
@@ -210,37 +209,42 @@ class kpi_data:
         self.curtailment = Myobject()
         self.line_loading = Myobject()
         self.line_balance = Myobject()
-        with open(read_folder + 'powerplants.pkl', 'rb') as f:
-            powerplants_raw = pickle.load(f)
-            # powerplants_raw = self.change_column_to_int(powerplants_raw)
-        with open(read_folder + 'P_max.pkl', 'rb') as f:
-            self.P_R.max.raw = pickle.load(f)
-            self.P_R.max.raw = self.change_column_to_int(self.P_R.max.raw)
-        with open(read_folder + 'demand.pkl', 'rb') as f:
-            demand_raw = pickle.load(f)
-            demand_raw = self.change_column_to_int(demand_raw)
-        with open(read_folder + 'share_solar.pkl', 'rb') as f:
-            share_solar_raw = pickle.load(f)
-            share_solar_raw = self.change_column_to_int(share_solar_raw)
-        with open(read_folder + 'share_wind.pkl', 'rb') as f:
-            share_wind_raw = pickle.load(f)
-            share_wind_raw = self.change_column_to_int(share_wind_raw)
+        #bezieht sich auf netzausbau:
+ #       with open(read_folder + 'powerplants.pkl', 'rb') as f:
+ #           powerplants_raw = pickle.load(f)
+ #           # powerplants_raw = self.change_column_to_int(powerplants_raw)
+ #       with open(read_folder + 'P_max.pkl', 'rb') as f:
+ #           self.P_R.max.raw = pickle.load(f)
+ #           self.P_R.max.raw = self.change_column_to_int(self.P_R.max.raw)
+ #       with open(read_folder + 'demand.pkl', 'rb') as f:
+ #           demand_raw = pickle.load(f)
+ #           demand_raw = self.change_column_to_int(demand_raw)
+ #       with open(read_folder + 'share_solar.pkl', 'rb') as f:
+ #           share_solar_raw = pickle.load(f)
+ #           share_solar_raw = self.change_column_to_int(share_solar_raw)
+ #       with open(read_folder + 'share_wind.pkl', 'rb') as f:
+ #           share_wind_raw = pickle.load(f)
+ #           share_wind_raw = self.change_column_to_int(share_wind_raw)
+        with open(read_folder + 'share_renewables.pkl', 'rb') as f:
+            share_renewables = pickle.load(f)
+            share_renewables = self.change_column_to_int(share_renewables)
 
-        bus_raw = self.read_in(y="", string="busses.csv", int_convert=False)
+
+        bus_raw = self.read_in(y="", string="zones.csv", int_convert=False)
         # overwrite the wind cluster bus country and bidding zone
-        bus_raw.loc[524:, ["country", "bidding_zone"]] = bus_raw.loc[524:, ["country", "bidding_zone"]].apply(
-            lambda x: x + "_wind_cluster")
+#todo ??????        bus_raw.loc[524:, ["country", "bidding_zone"]] = bus_raw.loc[524:, ["country", "bidding_zone"]].apply(
+#            lambda x: x + "_wind_cluster")
 
         storage = self.read_in(y="", string="storage.csv", int_convert=False)
-        lines_overview = self.read_in(y="", string="lines.csv", int_convert=False)
-        lines_DC_overview = self.read_in(y="", string="lines_DC.csv", int_convert=False)
+#        lines_overview = self.read_in(y="", string="lines.csv", int_convert=False)
+#        lines_DC_overview = self.read_in(y="", string="lines_DC.csv", int_convert=False)
         ror_supply = self.read_in(y="", string="ror_supply.csv")
-        CAP_lines = self.read_in(y="", string="CAP_BH.csv")
-        self.CAP_lines = CAP_lines.T.merge(lines_DC_overview[["from", "to", "EI"]], left_index=True,
-                                           right_index=True).merge(bus_raw[["LON", "LAT"]], left_on="from",
-                                                                   right_index=True).merge(bus_raw[["LON", "LAT"]],
-                                                                                           left_on="to",
-                                                                                           right_index=True).sort_index()
+#        CAP_lines = self.read_in(y="", string="CAP_BH.csv")
+#todo ?        self.CAP_lines = CAP_lines.T.merge(lines_DC_overview[["from", "to", "EI"]], left_index=True,
+#                                           right_index=True).merge(bus_raw[["LON", "LAT"]], left_on="from",
+#                                                                   right_index=True).merge(bus_raw[["LON", "LAT"]],
+#                                                                                           left_on="to",
+#                                                                                           right_index=True).sort_index()
         # encyc_powerplants_bus = create_encyclopedia(powerplants_raw[0]["bus"])
         # encyc_storage_bus = create_encyclopedia(storage["bus"])
         if scen != 1:
@@ -574,11 +578,11 @@ class comparison_data():
 class gurobi_variables:
     def __init__(self, solved_model):
         all_variables = solved_model.getVars()
-#       results_df = pd.DataFrame(data = all_variables)
-#        results_df.to_excel("output.xlsx")
         last_item = all_variables[-1].VarName.split(",")
 #        self.years = int(last_item[0].split("[")[1]) + 1
 #        self.timesteps = int(last_item[0]) + 1
+#       results_df = pd.DataFrame(data=all_variables)
+#        results_df.to_csv("output.csv")
         self.years = 1
         self.timesteps = 10
         counter = len(all_variables) - 1
@@ -645,33 +649,35 @@ class gurobi_variables:
     def export_csv(self, folder, scen):
         os.makedirs(folder, exist_ok=True)
         # cap_BH
-        pd.DataFrame(self.results["cap_BH"], columns=self.additional_columns["cap_BH"]).to_csv(folder + "cap_BH.csv")
+#        pd.DataFrame(self.results["cap_BH"], columns=self.additional_columns["cap_BH"]).to_csv(folder + "cap_BH.csv")
         for y in range(self.years):
             # P_C
-            pd.DataFrame(self.results["P_C"][y, :, :]).to_csv(folder + str(y) + "_P_C.csv")
+#todo            pd.DataFrame(self.results["P_C"][ :, :, :]).to_csv(folder + str(y) + "_P_C.csv")
             # P_R
-            pd.DataFrame(self.results["P_R"][y, :, :], columns=self.additional_columns["P_R"]).to_csv(
+            pd.DataFrame(self.results["P_R"][ :, :], columns=self.additional_columns["P_R"]).to_csv(
                 folder + str(y) + "_P_R.csv")
             # P_DAM
-            pd.DataFrame(self.results["P_DAM"][y, :, :]).to_csv(folder + str(y) + "_P_DAM.csv")
+            pd.DataFrame(self.results["P_DAM"][ :, :]).to_csv(folder + str(y) + "_P_DAM.csv")
             if scen in [2, 3, 4]:
                 # cap_E
                 pd.DataFrame(self.results["cap_E"]).to_csv(folder + "cap_E.csv")
                 # P_H
-                pd.DataFrame(self.results["P_H"][y, :, :]).to_csv(folder + str(y) + "_P_H.csv")
+                pd.DataFrame(self.results["P_H"][ :, :]).to_csv(folder + str(y) + "_P_H.csv")
             # load lost
-            pd.DataFrame(self.results["p_load_lost"][y, :, :]).to_csv(folder + str(y) + "_p_load_lost.csv")
+            pd.DataFrame(self.results["p_load_lost"][ :, :]).to_csv(folder + str(y) + "_p_load_lost.csv")
             # res_curtailment
-            pd.DataFrame(self.results["res_curtailment"][y, :, :],
+            pd.DataFrame(self.results["res_curtailment"][ :, :],
                          columns=self.additional_columns["res_curtailment"]).to_csv(
                 folder + str(y) + "_res_curtailment.csv")
             # storage
-            pd.DataFrame(self.results["P_S"][y, :, :]).to_csv(folder + str(y) + "_P_S.csv")
-            pd.DataFrame(self.results["C_S"][y, :, :]).to_csv(folder + str(y) + "_C_S.csv")
-            pd.DataFrame(self.results["L_S"][y, :, :]).to_csv(folder + str(y) + "_L_S.csv")
+            pd.DataFrame(self.results["S_ext"][ :, :]).to_csv(folder + str(y) + "_S_ext.csv")
+            pd.DataFrame(self.results["S_inj"][ :, :]).to_csv(folder + str(y) + "_S_inj.csv")
+#todo            pd.DataFrame(self.results["L_S"][ :, :]).to_csv(folder + str(y) + "_L_S.csv")
             # AC line flow
-            pd.DataFrame(self.results["F_AC"][y, :, :]).to_csv(folder + str(y) + "_F_AC.csv")
+#            pd.DataFrame(self.results["F_AC"][y, :, :]).to_csv(folder + str(y) + "_F_AC.csv")
             # DC line flow
-            pd.DataFrame(self.results["F_DC"][y, :, :]).to_csv(folder + str(y) + "_F_DC.csv")
+#            pd.DataFrame(self.results["F_DC"][y, :, :]).to_csv(folder + str(y) + "_F_DC.csv")
+            pd.DataFrame(self.results["F_NTC"][ :, :]).to_csv(folder + str(y) + "_F_NTC.csv")
+
 
 
