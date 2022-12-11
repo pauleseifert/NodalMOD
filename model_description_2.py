@@ -5,6 +5,7 @@ import gurobipy as gp
 import pandas as pd
 from gurobipy import GRB
 from gurobipy import Model
+from collections import ChainMap
 
 from helper_functions import ren_helper2, demand_helper2, create_encyclopedia
 from import_object_data_Zonal_Configuration import model_data, run_parameter
@@ -60,8 +61,16 @@ T = range(run_parameter.timesteps)  # hours
 T_extra = range(1, run_parameter.timesteps)
 Y = range(run_parameter.years)
 Y_extra = range(1, run_parameter.years)
-Z = data.nodes[run_parameter.scen].unique()
-G = final_dispatchable['type'].unique()
+#Z = data.nodes[run_parameter.scen].unique()
+Z = list(range(1,25))
+#G = final_dispatchable['type'].unique()
+G = list(range(1,9))
+#für die weiterverarbeitung müssen allen zonen und conventionals zahlen zugeordnet werden:
+Z_dict = { 1:'BE' , 2:'CZ' , 3:'DEV5' , 4:'DEV4' , 5:'DEV3' , 6:'DEV2', 7:'DEV1' , 8:'OffBZB', 9:'DK1', 10:'DK2' , 11:'FI' , 12:'UK', 13:'NL', 14:'NO2', 15:'NO4', 16:'NO3', 17:'NO1', 18:'NO5', 19:'PL', 20:'SE3', 21:'SE1', 22:'SE4', 23:'SE2', 24:'OffBZN'}
+G_dict ={ 1:'CCGT', 2:'coal', 3:'biomass', 4:'HDAM', 5:'OCGT', 6:'nuclear', 7:'lignite', 8:'oil'}
+#G_Z_dict = ChainMap(Z_dict, G_dict)
+
+
 R = final_res_series.columns
 DAM = final_reservoirs[[run_parameter.scen, 'Total_Capacity']].set_index(run_parameter.scen)
 S = final_storage.index
@@ -105,6 +114,7 @@ def demand_help(t,z):
         x = 0
     return x
 
+
 def ror_help(t,z):
     if z in final_ror_series.columns:
         x = final_ror_series.at[t,z]
@@ -135,10 +145,6 @@ def storage_capacity(z):
     else:
         x = 0
     return x
-
-
-
-
 
 final_dispatchable['Min_Capacity'] = final_dispatchable['Total_Capacity'].mul(0.2)
 p_g_min = final_dispatchable[['type', 'Min_Capacity', run_parameter.scen]].set_index([run_parameter.scen])
@@ -189,7 +195,7 @@ print("before Variables are made. The time difference is :", timeit.default_time
 #objective function
 model.setObjective(
     gp.quicksum(
-    gp.quicksum(P_CONV[t, g, z] * marginal_costs[g] for g in G for t in T)
+    gp.quicksum(P_CONV[t, g, z] * marginal_costs[G_dict[g]] for g in G for t in T)
     + price_LL * gp.quicksum(p_load_lost[t, z] for t in T)
     + storage_penalty * gp.quicksum(S_ext[t, z] for t in T)
     + penalty_curtailment * gp.quicksum(res_curtailment[t, z] for t in T) for z in Z), GRB.MINIMIZE)
@@ -202,10 +208,10 @@ model.addConstrs((
     +P_DAM[t, z]
     +S_ext[t, z]
     +ror_help(t,z)
-    +gp.quicksum(F_NTC[t, f] for f in encyc_NTC_from[z] for t in T)
-    -gp.quicksum(F_NTC[t, f] for f in encyc_NTC_to[z] for t in T)
+    +gp.quicksum(F_NTC[t, f] for f in encyc_NTC_from[Z_dict[z]] for t in T)
+    -gp.quicksum(F_NTC[t, f] for f in encyc_NTC_to[Z_dict[z]] for t in T)
     +p_load_lost[t, z]
-     == demand_help(t,z) + S_inj[t, z] for z in Z for t in T), name ="Injection_equality")
+     == demand_help(t,Z_dict[z]) + S_inj[t, z] for z in Z for t in T), name ="Injection_equality")
 
 #MassBalance alt
 #model.addConstrs((
@@ -224,28 +230,28 @@ model.addConstrs((F_NTC[t, f] <= data.ntc_BZ5["Sum of max"][f] for f in F for t 
 
 
 #Limit CONV Generation
-model.addConstrs((P_CONV[t, g, z] <= dispatchable_help(z,g) for t in T for g in G for z in Z ), name="GenerationLimitUp")
+model.addConstrs((P_CONV[t, g, z] <= dispatchable_help(Z_dict[z],G_dict[g]) for t in T for g in G for z in Z ), name="GenerationLimitUp")
 
 #Curtailment
-model.addConstrs((res_curtailment[t, z] == final_res_series[z][t] - P_R[t, z] for z in Z for t in T), name="RESCurtailment")
+model.addConstrs((res_curtailment[t, z] == final_res_series[Z_dict[z]][t] - P_R[t, z] for z in Z for t in T), name="RESCurtailment")
 
 #Storage Limits (was ist mit p_s_max_in /out)
-model.addConstrs((S_ext[t, z] <= storage_help_out(z) for z in Z for t in T), name="StoragePowerOutput")
-model.addConstrs((S_inj[t, z] <= storage_help_in(z) for z in Z for t in T), name="StoragePowerInput")
+model.addConstrs((S_ext[t, z] <= storage_help_out(Z_dict[z]) for z in Z for t in T), name="StoragePowerOutput")
+model.addConstrs((S_inj[t, z] <= storage_help_in(Z_dict[z]) for z in Z for t in T), name="StoragePowerInput")
 model.addConstrs((S_ext[t, z] <= L_S[t, z] for z in Z for t in T), name="StorageLevelGen")
 model.addConstrs((L_S[t, z] == L_S[t-1, z] - S_ext[t, z] + storage_efficiency * S_inj[t, z] for z in Z for t in T_extra), name="Storage_balance")
-model.addConstrs((L_S[t, z] == 0.5 * storage_capacity(z) - S_ext[t, z] + storage_efficiency * S_inj[t, z] for z in Z for t in [0]), name="Storage_balance_init")
-model.addConstrs((L_S[T[-1], z] == 0.5 * storage_capacity(z) for z in Z), name="Storage_end_level")
+model.addConstrs((L_S[t, z] == 0.5 * storage_capacity(Z_dict[z]) - S_ext[t, z] + storage_efficiency * S_inj[t, z] for z in Z for t in [0]), name="Storage_balance_init")
+model.addConstrs((L_S[T[-1], z] == 0.5 * storage_capacity(Z_dict[z]) for z in Z), name="Storage_end_level")
 
 #Limit DAM
-model.addConstrs((P_DAM[t, z] <= reservoir_help(z) for z in Z for t in T), name="DAMLimitUp")
+model.addConstrs((P_DAM[t, z] <= reservoir_help(Z_dict[z]) for z in Z for t in T), name="DAMLimitUp")
 #TODO ich glaube die hier brauchen wir nicht, sagt das selbe aus wie die gleichung darüber?: model.addConstrs((gp.quicksum(P_DAM[y, t, g] for g in encyc_dam_zones[z] for t in T) <= data.reservoir_zonal_limit[z] for z in Z for y in Y), name="DAMSumUp")
 
 #Limit RES
-model.addConstrs((P_R[t,z] <= final_res_series[z][t] for z in Z for t in T), name="ResGenerationLimitUp")
+model.addConstrs((P_R[t,z] <= final_res_series[Z_dict[z]][t] for z in Z for t in T), name="ResGenerationLimitUp")
 
 #Limit Load loss
-model.addConstrs((p_load_lost[t,z] <= demand_help(t,z) for z in Z for t in T), name= "limitLoadLoss")
+model.addConstrs((p_load_lost[t,z] <= demand_help(t,Z_dict[z]) for z in Z for t in T), name= "limitLoadLoss")
 
 print("The time difference after flow lines :", timeit.default_timer() - starttime)
 

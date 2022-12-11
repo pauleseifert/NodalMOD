@@ -149,3 +149,5 @@ data/*
 results/*
 .idea/*
 
+output.xlsx
+~$output.xlsx

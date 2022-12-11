@@ -574,11 +574,11 @@ class comparison_data():
 class gurobi_variables:
     def __init__(self, solved_model):
         all_variables = solved_model.getVars()
-        restults_df = pd.DataFrame(data = all_variables)
-        restults_df.to_excel("output.xlsx")
+#       results_df = pd.DataFrame(data = all_variables)
+#        results_df.to_excel("output.xlsx")
         last_item = all_variables[-1].VarName.split(",")
-        self.years = int(last_item[0].split("[")[1]) + 1
-        self.timesteps = int(last_item[0]) + 1
+#        self.years = int(last_item[0].split("[")[1]) + 1
+#        self.timesteps = int(last_item[0]) + 1
         self.years = 1
         self.timesteps = 10
         counter = len(all_variables) - 1
@@ -599,7 +599,7 @@ class gurobi_variables:
         bus_column_irregular = []
         irregular_columns = False
         first_run = True
-        x = len(current_variable)
+        x = len(current_variable.split(","))
         if len(current_variable.split(",")) == 3:
             first_dimension = int(current_variable.split(",")[0].split("[")[1]) + 1
             second_dimension = int(current_variable.split(",")[1]) + 1
