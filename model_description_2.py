@@ -112,6 +112,31 @@ def ror_help(t,z):
     else:
         x = 0
     return x
+def storage_help_in(z):
+    if z in final_storage.index:
+        x = final_storage.at[z,'Pmax_in']
+        return x
+    else:
+        x = 0
+    return x
+
+def storage_help_out(z):
+    if z in final_storage.index:
+        x = final_storage.at[z,'capacity']
+        return x
+    else:
+        x = 0
+    return x
+
+def storage_capacity(z):
+    if z in final_storage.index:
+        x = final_storage.at[z,'capacity']
+        return x
+    else:
+        x = 0
+    return x
+
+
 
 
 
@@ -148,14 +173,14 @@ demand_dict = final_demand.to_dict()
 print("Preparations done. The time difference is :", timeit.default_timer() - starttime)
 
 # Variables
-L_S = model.addVars(T, S, lb=0.0, ub = GRB.INFINITY, vtype=GRB.CONTINUOUS, name="L_S")  # storage level
+L_S = model.addVars(T, Z, lb=0.0, ub = GRB.INFINITY, vtype=GRB.CONTINUOUS, name="L_S")  # storage level
 P_CONV = model.addVars(T, G, Z, lb=0.0, ub = GRB.INFINITY, name="P_C") #conventional generation
 p_load_lost = model.addVars(T, Z, lb=0.0, ub = GRB.INFINITY, name = "p_load_lost") #loss of load
-P_R = model.addVars(T, R, lb=0.0, ub = GRB.INFINITY, name="P_R") #res generation in 10 timesteps
-res_curtailment = model.addVars(T, R, lb=0.0, ub = GRB.INFINITY, name="res_curtailment")
-P_DAM = model.addVars(T, DAM, lb=0.0, ub = GRB.INFINITY, name="P_DAM") #dam generation
-S_inj = model.addVars(T, S, lb=0.0, ub = GRB.INFINITY, vtype=GRB.CONTINUOUS, name="S_inj")  # demand from storage (filling)
-S_ext = model.addVars(T, S, lb=0.0, ub = GRB.INFINITY, vtype=GRB.CONTINUOUS, name="S_ext")  # power gen. by storage (depletion)
+P_R = model.addVars(T, Z, lb=0.0, ub = GRB.INFINITY, name="P_R") #res generation in 10 timesteps
+res_curtailment = model.addVars(T, Z, lb=0.0, ub = GRB.INFINITY, name="res_curtailment")
+P_DAM = model.addVars(T, Z, lb=0.0, ub = GRB.INFINITY, name="P_DAM") #dam generation
+S_inj = model.addVars(T, Z, lb=0.0, ub = GRB.INFINITY, vtype=GRB.CONTINUOUS, name="S_inj")  # demand from storage (filling)
+S_ext = model.addVars(T, Z, lb=0.0, ub = GRB.INFINITY, vtype=GRB.CONTINUOUS, name="S_ext")  # power gen. by storage (depletion)
 F_NTC = model.addVars(T, F, lb =-GRB.INFINITY, ub=GRB.INFINITY, name="F_NTC")
 
 print("before Variables are made. The time difference is :", timeit.default_timer() - starttime)
@@ -166,21 +191,21 @@ model.setObjective(
     gp.quicksum(
     gp.quicksum(P_CONV[t, g, z] * marginal_costs[g] for g in G for t in T)
     + price_LL * gp.quicksum(p_load_lost[t, z] for t in T)
-    + storage_penalty * gp.quicksum(S_ext[t, s] for t in T for s in S)
+    + storage_penalty * gp.quicksum(S_ext[t, z] for t in T)
     + penalty_curtailment * gp.quicksum(res_curtailment[t, z] for t in T) for z in Z), GRB.MINIMIZE)
 
 
 #Mass Balance neu
 model.addConstrs((
     gp.quicksum(P_CONV[t, g, z] for g in G)
-    +gp.quicksum(P_R[t, r] for r in R)
-    +gp.quicksum(P_DAM[t, dam] for dam in DAM)
-    +gp.quicksum(S_ext[t, s] for s in S)
+    +P_R[t, z]
+    +P_DAM[t, z]
+    +S_ext[t, z]
     +ror_help(t,z)
     +gp.quicksum(F_NTC[t, f] for f in encyc_NTC_from[z] for t in T)
     -gp.quicksum(F_NTC[t, f] for f in encyc_NTC_to[z] for t in T)
     +p_load_lost[t, z]
-     == demand_help(t,z) + gp.quicksum(S_inj[t, s] for s in S)for z in Z for t in T), name ="Injection_equality")
+     == demand_help(t,z) + S_inj[t, z] for z in Z for t in T), name ="Injection_equality")
 
 #MassBalance alt
 #model.addConstrs((
@@ -202,25 +227,22 @@ model.addConstrs((F_NTC[t, f] <= data.ntc_BZ5["Sum of max"][f] for f in F for t 
 model.addConstrs((P_CONV[t, g, z] <= dispatchable_help(z,g) for t in T for g in G for z in Z ), name="GenerationLimitUp")
 
 #Curtailment
-model.addConstrs((res_curtailment[t, r] == final_res_series[r][t] - P_R[t, r] for r in R for t in T), name="RESCurtailment")
+model.addConstrs((res_curtailment[t, z] == final_res_series[z][t] - P_R[t, z] for z in Z for t in T), name="RESCurtailment")
 
 #Storage Limits (was ist mit p_s_max_in /out)
-model.addConstrs((S_ext[t, s] <= final_storage["Pmax_out"][s] for s in S for t in T), name="StoragePowerOutput")
-model.addConstrs((S_inj[t, s] <= final_storage["Pmax_in"][s] for s in S for t in T), name="StoragePowerInput")
-model.addConstrs((S_ext[t, s] <= L_S[t, s] for s in S for t in T), name="StorageLevelGen")
-model.addConstrs((L_S[t, s] <= final_storage["capacity"][s] for s in S for t in T), name="StorageLevelCap")
-model.addConstrs((L_S[t, s] == L_S[t-1, s] - S_ext[t, s] + storage_efficiency * S_inj[t, s]  for s in S for t in T_extra), name="Storage_balance")
-model.addConstrs((L_S[t, s] == 0.5 * final_storage.at[s, "capacity"] - S_ext[t, s] + storage_efficiency * S_inj[t, s] for s in S for t in [0]), name="Storage_balance_init")
-model.addConstrs((L_S[T[-1], s] == 0.5 * final_storage.at[s, "capacity"] for s in S), name="Storage_end_level")
-
-
+model.addConstrs((S_ext[t, z] <= storage_help_out(z) for z in Z for t in T), name="StoragePowerOutput")
+model.addConstrs((S_inj[t, z] <= storage_help_in(z) for z in Z for t in T), name="StoragePowerInput")
+model.addConstrs((S_ext[t, z] <= L_S[t, z] for z in Z for t in T), name="StorageLevelGen")
+model.addConstrs((L_S[t, z] == L_S[t-1, z] - S_ext[t, z] + storage_efficiency * S_inj[t, z] for z in Z for t in T_extra), name="Storage_balance")
+model.addConstrs((L_S[t, z] == 0.5 * storage_capacity(z) - S_ext[t, z] + storage_efficiency * S_inj[t, z] for z in Z for t in [0]), name="Storage_balance_init")
+model.addConstrs((L_S[T[-1], z] == 0.5 * storage_capacity(z) for z in Z), name="Storage_end_level")
 
 #Limit DAM
-model.addConstrs((P_DAM[t, g] <= reservoir_help(g) for g in DAM for t in T), name="DAMLimitUp")
+model.addConstrs((P_DAM[t, z] <= reservoir_help(z) for z in Z for t in T), name="DAMLimitUp")
 #TODO ich glaube die hier brauchen wir nicht, sagt das selbe aus wie die gleichung darüber?: model.addConstrs((gp.quicksum(P_DAM[y, t, g] for g in encyc_dam_zones[z] for t in T) <= data.reservoir_zonal_limit[z] for z in Z for y in Y), name="DAMSumUp")
 
 #Limit RES
-model.addConstrs((P_R[t,r] <= final_res_series[r][t] for r in R for t in T), name="ResGenerationLimitUp")
+model.addConstrs((P_R[t,z] <= final_res_series[z][t] for z in Z for t in T), name="ResGenerationLimitUp")
 
 #Limit Load loss
 model.addConstrs((p_load_lost[t,z] <= demand_help(t,z) for z in Z for t in T), name= "limitLoadLoss")
