@@ -99,10 +99,11 @@ class model_data:
 
         #reading in NTCs
         #TODO: flexilines brauchen eine capacity zuweisung - Recherche? Offshore windfarms = Kinis Daten, BHEH =3000, NSEH1+2 = jeweils 10000
-        self.ntc_BAU = pd.read_excel("data\\final_readin_data\\NTC_BAU.xlsx")
-        self.ntc_BZ2 = pd.read_excel("data\\final_readin_data\\NTC_BZ_2.xlsx")
-        self.ntc_BZ3 = pd.read_excel("data\\final_readin_data\\NTC_BZ_3.xlsx")
-        self.ntc_BZ5 = pd.read_excel("data\\final_readin_data\\NTC_BZ_5.xlsx")
+        match run_parameter.scen:
+            case"BAU":self.ntc = pd.read_excel("data\\final_readin_data\\NTC_BAU.xlsx")
+            case"BZ2":self.ntc = pd.read_excel("data\\final_readin_data\\NTC_BZ_2.xlsx")
+            case"BZ3":self.ntc = pd.read_excel("data\\final_readin_data\\NTC_BZ_3.xlsx")
+            case"BZ5":self.ntc = pd.read_excel("data\\final_readin_data\\NTC_BZ_5.xlsx")
 
         #DEMAND
         self.demand = pd.read_excel("data\\final_readin_data\\demand.xlsx")
@@ -197,6 +198,7 @@ class kpi_data:
         self.run_parameter = run_parameter
         self.run_parameter.years = range(0, run_parameter.years)
         years = self.run_parameter.years
+        scen = run_parameter.scen
 
         #todo hier namen des folders eingeben, der die variablen enthält:
         read_folder = run_parameter.read_folder = run_parameter.directory + "results/" + run_parameter.case_name + "/" + str(run_parameter.scen) + "/subscen" + str(run_parameter.sensitivity_scen) + "/"
@@ -227,7 +229,7 @@ class kpi_data:
  #           share_wind_raw = self.change_column_to_int(share_wind_raw)
         with open(read_folder + 'share_renewables.pkl', 'rb') as f:
             share_renewables = pickle.load(f)
-            share_renewables = self.change_column_to_int(share_renewables)
+ #           share_renewables = self.change_column_to_int(share_renewables)
 
 
         bus_raw = self.read_in(y="", string="zones.csv", int_convert=False)
@@ -247,34 +249,34 @@ class kpi_data:
 #                                                                                           right_index=True).sort_index()
         # encyc_powerplants_bus = create_encyclopedia(powerplants_raw[0]["bus"])
         # encyc_storage_bus = create_encyclopedia(storage["bus"])
-        if scen != 1:
-            self.CAP_E = self.read_in(y="", string="CAP_E.csv").transpose().merge(
-                run_parameter.electrolyser[scen][["name", "bus"]], left_index=True, right_index=True).merge(
-                bus_raw[["LON", "LAT"]], left_on="bus", right_index=True).set_index("name")
+#        if scen != 1:
+#            self.CAP_E = self.read_in(y="", string="CAP_E.csv").transpose().merge(
+#                run_parameter.electrolyser[scen][["name", "bus"]], left_index=True, right_index=True).merge(
+#                bus_raw[["LON", "LAT"]], left_on="bus", right_index=True).set_index("name")
 
-        self.F_AC = {y: self.read_in(y=y, string="_F_AC.csv") for y in years}
-        self.timesteps = self.F_AC[0].shape[0]
-        self.F_DC = {y: self.read_in(y=y, string="_F_DC.csv") for y in years}
-        self.EI_trade = {y: self.EI_connections(lines_DC_overview=lines_DC_overview, bus_overview=bus_raw, year=y) for y
-                         in years}
+#        self.F_AC = {y: self.read_in(y=y, string="_F_AC.csv") for y in years}
+#        self.timesteps = self.F_AC[0].shape[0]
+        self.F_NTC = {y: self.read_in(y=y, string="_F_NTC.csv") for y in years}
+#        self.EI_trade = {y: self.EI_connections(lines_DC_overview=lines_DC_overview, bus_overview=bus_raw, year=y) for y
+#                         in years}
         self.P_R.raw = {y: self.read_in(y=y, string="_P_R.csv") for y in years}
         self.P_DAM = {y: self.read_in(y=y, string="_P_DAM.csv") for y in years}
         self.res_curtailment = {
             y: pd.read_csv(read_folder + str(y) + "_res_curtailment.csv", index_col=0, names=self.P_R.raw[y].columns,
                            header=0) for y in years}
-        self.P_C = {y: self.read_in(y=y, string="_P_C.csv") for y in years}
-        self.P_S = {y: self.read_in(y=y, string="_P_S.csv") for y in years}
-        self.L_S = {y: self.read_in(y=y, string="_L_S.csv") for y in years}
-        self.C_S = {y: self.read_in(y=y, string="_C_S.csv") for y in years}
+#todo        self.P_C = {y: self.read_in(y=y, string="_P_C.csv") for y in years}
+        self.S_ext = {y: self.read_in(y=y, string="_S_ext.csv") for y in years}
+#todo        self.L_S = {y: self.read_in(y=y, string="_L_S.csv") for y in years}
+        self.S_inj = {y: self.read_in(y=y, string="_S_inj.csv") for y in years}
         self.P_loss_load = {y: self.read_in(y=y, string="_p_load_lost.csv") for y in years}
-        if scen != 1:
-            self.P_H = {
-                y: self.read_in(y=y, string="_P_H.csv").transpose().merge(run_parameter.electrolyser[scen]["name"],
-                                                                          left_index=True, right_index=True).set_index(
-                    "name").T for y in years}
+#        if scen != 1:
+#            self.P_H = {
+#                y: self.read_in(y=y, string="_P_H.csv").transpose().merge(run_parameter.electrolyser[scen]["name"],
+#                                                                          left_index=True, right_index=True).set_index(
+#                    "name").T for y in years}
 
         # calculations
-        if scen != 1: self.load_factor.elect = pd.DataFrame({y: (self.P_H[y] / self.CAP_E[y]).mean() for y in years})
+#        if scen != 1: self.load_factor.elect = pd.DataFrame({y: (self.P_H[y] / self.CAP_E[y]).mean() for y in years})
         self.P_R.bz = {y: self.prepare_results_files_bz(self.P_R.raw[y], bus_raw) for y in years}
         self.P_R.max.bz = {y: self.prepare_results_files_bz(self.P_R.max.raw[y], bus_raw) for y in years}
         self.P_R.solar = {y: share_solar_raw[y].multiply(self.P_R.raw[y]).dropna(axis=1, how='all') for y in years}
@@ -581,8 +583,8 @@ class gurobi_variables:
         last_item = all_variables[-1].VarName.split(",")
 #        self.years = int(last_item[0].split("[")[1]) + 1
 #        self.timesteps = int(last_item[0]) + 1
-#       results_df = pd.DataFrame(data=all_variables)
-#        results_df.to_csv("output.csv")
+#        results_df = pd.DataFrame(all_variables)
+#        results_df.to_excel(r'C:\Users\marie\Documents\GitHub\MulCarNI\RESULT!.xlsx', index=False)
         self.years = 1
         self.timesteps = 10
         counter = len(all_variables) - 1
@@ -654,29 +656,31 @@ class gurobi_variables:
             # P_C
 #todo            pd.DataFrame(self.results["P_C"][ :, :, :]).to_csv(folder + str(y) + "_P_C.csv")
             # P_R
-            pd.DataFrame(self.results["P_R"][ :, :], columns=self.additional_columns["P_R"]).to_csv(
-                folder + str(y) + "_P_R.csv")
+#           pd.DataFrame(self.results["P_R"][ :, :], columns=self.additional_columns["P_R"]).to_csv(
+#                folder + str(y) + "_P_R.csv")
             # P_DAM
             pd.DataFrame(self.results["P_DAM"][ :, :]).to_csv(folder + str(y) + "_P_DAM.csv")
-            if scen in [2, 3, 4]:
-                # cap_E
-                pd.DataFrame(self.results["cap_E"]).to_csv(folder + "cap_E.csv")
-                # P_H
-                pd.DataFrame(self.results["P_H"][ :, :]).to_csv(folder + str(y) + "_P_H.csv")
+
+#           if scen in [2, 3, 4]:
+#                # cap_E
+#                pd.DataFrame(self.results["cap_E"]).to_csv(folder + "cap_E.csv")
+#                # P_H
+#                pd.DataFrame(self.results["P_H"][ :, :]).to_csv(folder + str(y) + "_P_H.csv")
+#
             # load lost
             pd.DataFrame(self.results["p_load_lost"][ :, :]).to_csv(folder + str(y) + "_p_load_lost.csv")
             # res_curtailment
-            pd.DataFrame(self.results["res_curtailment"][ :, :],
-                         columns=self.additional_columns["res_curtailment"]).to_csv(
-                folder + str(y) + "_res_curtailment.csv")
+#todo: was macht das columns hier? brauchen wir das, oder geht wie hier drunter? pd.DataFrame(self.results["res_curtailment"][ :, :], columns=self.additional_columns["res_curtailment"]).to_csv(folder + str(y) + "_res_curtailment.csv")
+            pd.DataFrame(self.results["res_curtailment"][ :, :]).to_csv(folder + str(y) + "_res_curtailment.csv")
+
             # storage
             pd.DataFrame(self.results["S_ext"][ :, :]).to_csv(folder + str(y) + "_S_ext.csv")
             pd.DataFrame(self.results["S_inj"][ :, :]).to_csv(folder + str(y) + "_S_inj.csv")
-#todo            pd.DataFrame(self.results["L_S"][ :, :]).to_csv(folder + str(y) + "_L_S.csv")
+            pd.DataFrame(self.results["L_S"][ :, :]).to_csv(folder + str(y) + "_L_S.csv")
             # AC line flow
-#            pd.DataFrame(self.results["F_AC"][y, :, :]).to_csv(folder + str(y) + "_F_AC.csv")
+#           pd.DataFrame(self.results["F_AC"][y, :, :]).to_csv(folder + str(y) + "_F_AC.csv")
             # DC line flow
-#            pd.DataFrame(self.results["F_DC"][y, :, :]).to_csv(folder + str(y) + "_F_DC.csv")
+#           pd.DataFrame(self.results["F_DC"][y, :, :]).to_csv(folder + str(y) + "_F_DC.csv")
             pd.DataFrame(self.results["F_NTC"][ :, :]).to_csv(folder + str(y) + "_F_NTC.csv")
 
 

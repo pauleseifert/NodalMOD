@@ -61,20 +61,28 @@ T = range(run_parameter.timesteps)  # hours
 T_extra = range(1, run_parameter.timesteps)
 Y = range(run_parameter.years)
 Y_extra = range(1, run_parameter.years)
-#Z = data.nodes[run_parameter.scen].unique()
-Z = list(range(1,25))
-#G = final_dispatchable['type'].unique()
-G = list(range(1,9))
+Z = list(range(len(data.nodes[run_parameter.scen].unique())))
+G = list(range(len(final_dispatchable['type'].unique())))
+
 #für die weiterverarbeitung müssen allen zonen und conventionals zahlen zugeordnet werden:
-Z_dict = { 1:'BE' , 2:'CZ' , 3:'DEV5' , 4:'DEV4' , 5:'DEV3' , 6:'DEV2', 7:'DEV1' , 8:'OffBZB', 9:'DK1', 10:'DK2' , 11:'FI' , 12:'UK', 13:'NL', 14:'NO2', 15:'NO4', 16:'NO3', 17:'NO1', 18:'NO5', 19:'PL', 20:'SE3', 21:'SE1', 22:'SE4', 23:'SE2', 24:'OffBZN'}
-G_dict ={ 1:'CCGT', 2:'coal', 3:'biomass', 4:'HDAM', 5:'OCGT', 6:'nuclear', 7:'lignite', 8:'oil'}
-#G_Z_dict = ChainMap(Z_dict, G_dict)
+Z_dict = {}
+keys = range(len(data.nodes[run_parameter.scen].unique()))
+values = data.nodes[run_parameter.scen].unique()
+for i in keys:
+        Z_dict[i] = values[i]
+
+
+G_dict = {}
+keys = range(len(final_dispatchable['type'].unique()))
+values = final_dispatchable['type'].unique()
+for i in keys:
+        G_dict[i] = values[i]
 
 
 R = final_res_series.columns
 DAM = final_reservoirs[[run_parameter.scen, 'Total_Capacity']].set_index(run_parameter.scen)
 S = final_storage.index
-F = data.ntc_BZ5.index
+F = data.ntc.index
 
 
 #Parameters
@@ -160,8 +168,8 @@ else:
 delta = 8760/full_ts
 
 #here I do some dictionary reordering.
-encyc_NTC_from = create_encyclopedia(data.ntc_BZ5["fromBZ5"])
-encyc_NTC_to = create_encyclopedia(data.ntc_BZ5["toBZ5"])
+encyc_NTC_from = create_encyclopedia(data.ntc["from" + run_parameter.scen])
+encyc_NTC_to = create_encyclopedia(data.ntc["to" + run_parameter.scen])
 
 
 res_series_zones = dict()
@@ -226,7 +234,7 @@ model.addConstrs((
 #     == demand_help(t,z) + gp.quicksum(S_inj[t, s] for s in S)for z in Z for t in T), name ="Injection_equality")
 
 #NTC flow
-model.addConstrs((F_NTC[t, f] <= data.ntc_BZ5["Sum of max"][f] for f in F for t in T), name="NTC_max_cap_limit")
+model.addConstrs((F_NTC[t, f] <= data.ntc["Sum of max"][f] for f in F for t in T), name="NTC_max_cap_limit")
 
 
 #Limit CONV Generation
@@ -245,7 +253,7 @@ model.addConstrs((L_S[T[-1], z] == 0.5 * storage_capacity(Z_dict[z]) for z in Z)
 
 #Limit DAM
 model.addConstrs((P_DAM[t, z] <= reservoir_help(Z_dict[z]) for z in Z for t in T), name="DAMLimitUp")
-#TODO ich glaube die hier brauchen wir nicht, sagt das selbe aus wie die gleichung darüber?: model.addConstrs((gp.quicksum(P_DAM[y, t, g] for g in encyc_dam_zones[z] for t in T) <= data.reservoir_zonal_limit[z] for z in Z for y in Y), name="DAMSumUp")
+#Todo ich glaube die hier brauchen wir nicht, sagt das selbe aus wie die gleichung darüber?: model.addConstrs((gp.quicksum(P_DAM[y, t, g] for g in encyc_dam_zones[z] for t in T) <= data.reservoir_zonal_limit[z] for z in Z for y in Y), name="DAMSumUp")
 
 #Limit RES
 model.addConstrs((P_R[t,z] <= final_res_series[Z_dict[z]][t] for z in Z for t in T), name="ResGenerationLimitUp")
@@ -267,8 +275,8 @@ except:
 data.dispatchable.to_csv(run_parameter.export_folder + "zones.csv")
 data.storage.to_csv(run_parameter.export_folder + "storage.csv")
 #data.ac_lines.to_csv(run_parameter.export_folder + "lines.csv")
-data.ntc_BZ5.to_csv(run_parameter.export_folder + "lines_NTC.csv")
-#todo ist das hier richtig?:
+data.ntc.to_csv(run_parameter.export_folder + "lines_NTC.csv")
+#todo ist das hier richtig? wofür:
 with open(run_parameter.export_folder+'share_renewables.pkl', 'wb+') as f:
     pickle.dump(data.res_series, f)
 

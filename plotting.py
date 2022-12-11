@@ -7,6 +7,7 @@ from dataclasses import dataclass
 import plotly.graph_objects as go
 from sys import platform
 import sys
+from import_object_data_Zonal_Configuration import run_parameter
 
 
 #read in
@@ -14,10 +15,10 @@ if platform == "linux" or platform == "linux2":
     directory = "/work/seifert/"
     case_name = sys.argv[1]
     scen = int(sys.argv[2])
-elif platform == "darwin":
+elif platform == "win32":
     directory = ""
-    case_name = "test"
-    scen = 1
+    case_name = "Offshore_Bidding_Zone_Scenario"
+    scen = 'BZ5/subscen0'
     years = [0]
 
 
@@ -94,27 +95,28 @@ for y in years:
     export_folder = directory + "results/" + case_name + "/"
 
     beta = [2.8289908676897135, 4.026974650921101, 5.619285222154198, 6.386270713539531]
-    bus_raw = pd.read_csv(read_folder + "busses.csv", index_col=0)
-    powerplants_raw = pd.read_csv(read_folder + "powerplants.csv", index_col=0)
+    zone_raw = pd.read_csv(read_folder + "zones.csv", index_col=0)
+#    powerplants_raw = pd.read_csv(read_folder + "powerplants.csv", index_col=0)
     storage = pd.read_csv(read_folder + "storage.csv", index_col=0)
-    lines_overview = pd.read_csv(read_folder + "lines.csv", index_col=0)
-    lines_DC_overview = pd.read_csv(read_folder + "lines_DC.csv", index_col=0)
-    share_solar_raw = pd.read_csv(read_folder + "share_solar.csv", index_col=0)
-    share_wind_raw = pd.read_csv(read_folder + "share_wind.csv", index_col=0)
-    wind_capacities_raw = pd.read_csv("data/north_sea_energy_islands/csv/wind_capacity.csv", index_col=0)
-    solar_capacities_raw = pd.read_csv("data/north_sea_energy_islands/csv/wind_capacity.csv", index_col=0)
-    wind_capacities = wind_capacities_raw.merge(bus_raw[["LAT", "LON"]], how="left", left_on="bus", right_index=True).rename({"Pmax":0}, axis=1)
-    solar_capacities = solar_capacities_raw.merge(bus_raw[["LAT", "LON"]], how="left", left_on="bus", right_index=True)
+#    lines_overview = pd.read_csv(read_folder + "lines.csv", index_col=0)
+#    lines_DC_overview = pd.read_csv(read_folder + "lines_DC.csv", index_col=0)
+#    share_solar_raw = pd.read_csv(read_folder + "share_solar.csv", index_col=0)
+#    share_wind_raw = pd.read_csv(read_folder + "share_wind.csv", index_col=0)
+#    wind_capacities_raw = pd.read_csv("data/north_sea_energy_islands/csv/wind_capacity.csv", index_col=0)
+#    solar_capacities_raw = pd.read_csv("data/north_sea_energy_islands/csv/wind_capacity.csv", index_col=0)
+#    wind_capacities = wind_capacities_raw.merge(bus_raw[["LAT", "LON"]], how="left", left_on="bus", right_index=True).rename({"Pmax":0}, axis=1)
+#    solar_capacities = solar_capacities_raw.merge(bus_raw[["LAT", "LON"]], how="left", left_on="bus", right_index=True)
 
-    F_AC = pd.read_csv(read_folder + str(y)+ "_F_AC.csv", index_col=0)
-    F_DC = pd.read_csv(read_folder +str(y)+ "_F_DC.csv", index_col=0)
-    CAP_BH = pd.read_csv(read_folder + "CAP_BH.csv", index_col=0)
-    P_R_max_raw = pd.read_csv(read_folder + "P_R_max.csv", index_col=0)*beta[y]
+#    F_AC = pd.read_csv(read_folder + str(y)+ "_F_AC.csv", index_col=0)
+#    F_DC = pd.read_csv(read_folder +str(y)+ "_F_DC.csv", index_col=0)
+    F_NTC = pd.read_csv(read_folder + str(y) + "_F_NTC.csv", index_col=0)
+#    CAP_BH = pd.read_csv(read_folder + "CAP_BH.csv", index_col=0)
+#    P_R_max_raw = pd.read_csv(read_folder + "P_R_max.csv", index_col=0)*beta[y]
     P_R_raw = pd.read_csv(read_folder + str(y)+ "_P_R.csv", index_col=0)
-    P_C_raw = pd.read_csv(read_folder + str(y)+ "_P_C.csv", index_col=0)
-    P_S_raw = pd.read_csv(read_folder +str(y)+ "_P_S.csv", index_col=0)
-    L_S_raw = pd.read_csv(read_folder +str(y)+ "_L_S.csv", index_col=0)
-    D_S_raw = pd.read_csv(read_folder + str(y)+ "_D_S.csv", index_col=0)
+#    P_C_raw = pd.read_csv(read_folder + str(y)+ "_P_C.csv", index_col=0)
+    S_ext_raw = pd.read_csv(read_folder +str(y)+ "_S_ext.csv", index_col=0)
+#    L_S_raw = pd.read_csv(read_folder +str(y)+ "_L_S.csv", index_col=0)
+#    D_S_raw = pd.read_csv(read_folder + str(y)+ "_D_S.csv", index_col=0)
 
 
 

@@ -1,5 +1,4 @@
 import os
-
 import pandas as pd
 
 from import_object_data_Zonal_Configuration import kpi_data, run_parameter
