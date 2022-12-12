@@ -652,14 +652,15 @@ class gurobi_variables:
         os.makedirs(folder, exist_ok=True)
         # cap_BH
 #        pd.DataFrame(self.results["cap_BH"], columns=self.additional_columns["cap_BH"]).to_csv(folder + "cap_BH.csv")
-        for y in range(self.years):
+        y=0
+        for z in range(23):
             # P_C
-#todo            pd.DataFrame(self.results["P_C"][ :, :, :]).to_csv(folder + str(y) + "_P_C.csv")
-            # P_R
-#           pd.DataFrame(self.results["P_R"][ :, :], columns=self.additional_columns["P_R"]).to_csv(
+            pd.DataFrame(self.results["P_C"][ :, :,z]).to_csv(folder + str(z) + "_P_C.csv")
+        # P_R
+#       pd.DataFrame(self.results["P_R"][ :, :], columns=self.additional_columns["P_R"]).to_csv(
 #                folder + str(y) + "_P_R.csv")
-            # P_DAM
-            pd.DataFrame(self.results["P_DAM"][ :, :]).to_csv(folder + str(y) + "_P_DAM.csv")
+        # P_DAM
+        pd.DataFrame(self.results["P_DAM"][ :, :]).to_csv(folder + "_P_DAM.csv")
 
 #           if scen in [2, 3, 4]:
 #                # cap_E
@@ -667,21 +668,22 @@ class gurobi_variables:
 #                # P_H
 #                pd.DataFrame(self.results["P_H"][ :, :]).to_csv(folder + str(y) + "_P_H.csv")
 #
-            # load lost
-            pd.DataFrame(self.results["p_load_lost"][ :, :]).to_csv(folder + str(y) + "_p_load_lost.csv")
-            # res_curtailment
-#todo: was macht das columns hier? brauchen wir das, oder geht wie hier drunter? pd.DataFrame(self.results["res_curtailment"][ :, :], columns=self.additional_columns["res_curtailment"]).to_csv(folder + str(y) + "_res_curtailment.csv")
-            pd.DataFrame(self.results["res_curtailment"][ :, :]).to_csv(folder + str(y) + "_res_curtailment.csv")
+        # load lost
+        pd.DataFrame(self.results["p_load_lost"][ :, :]).to_csv(folder + "_p_load_lost.csv")
+        # res_curtailment
 
-            # storage
-            pd.DataFrame(self.results["S_ext"][ :, :]).to_csv(folder + str(y) + "_S_ext.csv")
-            pd.DataFrame(self.results["S_inj"][ :, :]).to_csv(folder + str(y) + "_S_inj.csv")
-            pd.DataFrame(self.results["L_S"][ :, :]).to_csv(folder + str(y) + "_L_S.csv")
-            # AC line flow
+#        pd.DataFrame(self.results["res_curtailment"][ :, :], columns=self.additional_columns["res_curtailment"]).to_csv(folder + str(y) + "_res_curtailment.csv")
+        pd.DataFrame(self.results["res_curtailment"][ :, :]).to_csv(folder + "_res_curtailment.csv")
+
+        # storage
+        pd.DataFrame(self.results["S_ext"][ :, :]).to_csv(folder + "_S_ext.csv")
+        pd.DataFrame(self.results["S_inj"][ :, :]).to_csv(folder + "_S_inj.csv")
+        pd.DataFrame(self.results["L_S"][ :, :]).to_csv(folder + "_L_S.csv")
+        # AC line flow
 #           pd.DataFrame(self.results["F_AC"][y, :, :]).to_csv(folder + str(y) + "_F_AC.csv")
-            # DC line flow
+        # DC line flow
 #           pd.DataFrame(self.results["F_DC"][y, :, :]).to_csv(folder + str(y) + "_F_DC.csv")
-            pd.DataFrame(self.results["F_NTC"][ :, :]).to_csv(folder + str(y) + "_F_NTC.csv")
+        pd.DataFrame(self.results["F_NTC"][ :, :]).to_csv(folder + "_F_NTC.csv")
 
 
 
