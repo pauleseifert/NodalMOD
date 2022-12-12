@@ -235,7 +235,7 @@ model.addConstrs((
 
 #NTC flow
 model.addConstrs((F_NTC[t, f] <= data.ntc["Sum of max"][f] for f in F for t in T), name="NTC_max_cap_limit")
-
+model.addConstrs((F_NTC[t, f] >= -data.ntc["Sum of max"][f] for f in F for t in T), name="NTC_max_cap_limit")
 
 #Limit CONV Generation
 model.addConstrs((P_CONV[t, g, z] <= dispatchable_help(Z_dict[z],G_dict[g]) for t in T for g in G for z in Z ), name="GenerationLimitUp")

@@ -34,7 +34,7 @@ class run_parameter:
             self.case_name = scenario_name
             self.years = 1
             self.timesteps = 10
-            self.scen = "BZ5"
+            self.scen = "BAU"
             self.sensitivity_scen = 0
         self.solving = False
         self.reduced_TS = True
@@ -648,12 +648,12 @@ class gurobi_variables:
             print("Error!")
         return array, counter, irregular_columns, bus_column_irregular
 
-    def export_csv(self, folder, scen):
+    def export_csv(self, folder, scen, number_zones):
         os.makedirs(folder, exist_ok=True)
         # cap_BH
 #        pd.DataFrame(self.results["cap_BH"], columns=self.additional_columns["cap_BH"]).to_csv(folder + "cap_BH.csv")
-        y=0
-        for z in range(23):
+
+        for z in range(number_zones):
             # P_C
             pd.DataFrame(self.results["P_C"][ :, :,z]).to_csv(folder + str(z) + "_P_C.csv")
         # P_R
