@@ -34,7 +34,7 @@ class run_parameter:
             self.case_name = scenario_name
             self.years = 1
             self.timesteps = 10
-            self.scen = "BAU"
+            self.scen = "BZ2"
             self.sensitivity_scen = 0
         self.solving = False
         self.reduced_TS = True
@@ -656,11 +656,14 @@ class gurobi_variables:
         for z in range(number_zones):
             # P_C
             pd.DataFrame(self.results["P_C"][ :, :,z]).to_csv(folder + str(z) + "_P_C.csv")
+            pd.DataFrame(self.results["P_C"][:, :, z]).to_excel(folder + str(z) + "_P_C.xlsx")
         # P_R
-#       pd.DataFrame(self.results["P_R"][ :, :], columns=self.additional_columns["P_R"]).to_csv(
-#                folder + str(y) + "_P_R.csv")
+#       pd.DataFrame(self.results["P_R"][ :, :], columns=self.additional_columns["P_R"]).to_csv(folder + str(y) + "_P_R.csv")
+        pd.DataFrame(self.results["P_R"][:, :]).to_csv(folder + "_P_R.csv")
+        pd.DataFrame(self.results["P_R"][:, :]).to_excel(folder + "_P_R.xlsx")
         # P_DAM
         pd.DataFrame(self.results["P_DAM"][ :, :]).to_csv(folder + "_P_DAM.csv")
+        pd.DataFrame(self.results["P_DAM"][:, :]).to_excel(folder + "_P_DAM.xlsx")
 
 #           if scen in [2, 3, 4]:
 #                # cap_E
@@ -670,20 +673,26 @@ class gurobi_variables:
 #
         # load lost
         pd.DataFrame(self.results["p_load_lost"][ :, :]).to_csv(folder + "_p_load_lost.csv")
+        pd.DataFrame(self.results["p_load_lost"][:, :]).to_excel(folder + "_p_load_lost.xlsx")
         # res_curtailment
 
 #        pd.DataFrame(self.results["res_curtailment"][ :, :], columns=self.additional_columns["res_curtailment"]).to_csv(folder + str(y) + "_res_curtailment.csv")
         pd.DataFrame(self.results["res_curtailment"][ :, :]).to_csv(folder + "_res_curtailment.csv")
+        pd.DataFrame(self.results["res_curtailment"][:, :]).to_excel(folder + "_res_curtailment.xlsx")
 
         # storage
         pd.DataFrame(self.results["S_ext"][ :, :]).to_csv(folder + "_S_ext.csv")
+        pd.DataFrame(self.results["S_ext"][:, :]).to_excel(folder + "_S_ext.xlsx")
         pd.DataFrame(self.results["S_inj"][ :, :]).to_csv(folder + "_S_inj.csv")
+        pd.DataFrame(self.results["S_inj"][:, :]).to_excel(folder + "_S_inj.xlsx")
         pd.DataFrame(self.results["L_S"][ :, :]).to_csv(folder + "_L_S.csv")
+        pd.DataFrame(self.results["L_S"][:, :]).to_excel(folder + "_L_S.xlsx")
         # AC line flow
 #           pd.DataFrame(self.results["F_AC"][y, :, :]).to_csv(folder + str(y) + "_F_AC.csv")
         # DC line flow
 #           pd.DataFrame(self.results["F_DC"][y, :, :]).to_csv(folder + str(y) + "_F_DC.csv")
         pd.DataFrame(self.results["F_NTC"][ :, :]).to_csv(folder + "_F_NTC.csv")
+        pd.DataFrame(self.results["F_NTC"][:, :]).to_excel(folder + "_F_NTC.xlsx")
 
 
 
