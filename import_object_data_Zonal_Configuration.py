@@ -44,6 +44,7 @@ class run_parameter:
             self.scen) + "/" + "subscen" + str(self.sensitivity_scen) + "/"
         self.import_folder = self.directory + "data/"
         os.makedirs(self.export_folder, exist_ok=True)
+        self.CO2_price = 0
         #
         self.hours = 504  # 21 representative days
         self.scaling_factor = 8760 / self.hours
@@ -657,6 +658,13 @@ class gurobi_variables:
             # P_C
             pd.DataFrame(self.results["P_C"][ :, :,z]).to_csv(folder + str(z) + "_P_C.csv")
             pd.DataFrame(self.results["P_C"][:, :, z]).to_excel(folder + str(z) + "_P_C.xlsx")
+
+        #for c in m.getConstrs():
+            #print(f"{c.VarName}: {c.Pi}")
+
+        #dict = {
+            #t: {z: model.getConstrByName("Injection_equality" + "[" + str(z) + "," + str(t) + "]").Pi for z in set}for t in T}
+
         # P_R
 #       pd.DataFrame(self.results["P_R"][ :, :], columns=self.additional_columns["P_R"]).to_csv(folder + str(y) + "_P_R.csv")
         pd.DataFrame(self.results["P_R"][:, :]).to_csv(folder + "_P_R.csv")
@@ -693,6 +701,5 @@ class gurobi_variables:
 #           pd.DataFrame(self.results["F_DC"][y, :, :]).to_csv(folder + str(y) + "_F_DC.csv")
         pd.DataFrame(self.results["F_NTC"][ :, :]).to_csv(folder + "_F_NTC.csv")
         pd.DataFrame(self.results["F_NTC"][:, :]).to_excel(folder + "_F_NTC.xlsx")
-
 
 

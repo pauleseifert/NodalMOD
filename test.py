@@ -102,7 +102,8 @@ df_nodes.to_csv('df_nodes.csv')
 
 #plotting average marginal costs
 
-nodes = pd.read_excel("data\\final_readin_data\\nodes.xlsx", index_col=0)
+#nodes = pd.read_csv("data\\final_readin_data\\generators.csv", index_col=0)
+generation = pd.read_csv("data\\\PyPSA_elec1024\\generators.csv", index_col=0)
 dispatchables = pd.read_excel("data\\final_readin_data\\dispatchable.xlsx")
 dispatchables_mc = dispatchables.loc[dispatchables.groupby(["type"])]
 dispatchables_mc = dispatchables.groupby(['mc', 'type'])
@@ -129,14 +130,3 @@ dispatchables_mc_final.to_excel("mc_conv.xlsx")
 df = df_results_generation.set_index().transpose()
 df_2 = df.reset_index(inplace=True)
 df = df.merge(dispatchables_mc_final, on='type')
-for i in df_results_generation:
-    if
-
-    def export_csv(self, folder, scen, number_zones):
-        os.makedirs(folder, exist_ok=True)
-        # cap_BH
-#        pd.DataFrame(self.results["cap_BH"], columns=self.additional_columns["cap_BH"]).to_csv(folder + "cap_BH.csv")
-
-        for z in range(number_zones):
-            # P_C
-            P_CONV = pd.DataFrame(self.results["P_C"][:, :, z]).to_excel(folder + str(z) + "_P_C.xlsx")
