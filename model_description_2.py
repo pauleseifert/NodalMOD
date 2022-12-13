@@ -234,8 +234,8 @@ model.addConstrs((
 #     == demand_help(t,z) + gp.quicksum(S_inj[t, s] for s in S)for z in Z for t in T), name ="Injection_equality")
 
 #NTC flow
-model.addConstrs((F_NTC[t, f] <= data.ntc["Sum of max"][f] for f in F for t in T), name="NTC_max_cap_limit")
-model.addConstrs((F_NTC[t, f] >= -data.ntc["Sum of max"][f] for f in F for t in T), name="NTC_max_cap_limit")
+model.addConstrs((F_NTC[t, f] <= data.ntc["Sum of max"][f] for f in F for t in T), name="NTC_max_cap_limit_in")
+model.addConstrs((F_NTC[t, f] >= -data.ntc["Sum of max"][f] for f in F for t in T), name="NTC_max_cap_limit_out")
 
 #Limit CONV Generation
 model.addConstrs((P_CONV[t, g, z] <= dispatchable_help(Z_dict[z],G_dict[g]) for t in T for g in G for z in Z ), name="GenerationLimitUp")
@@ -274,6 +274,7 @@ except:
 # necessary files: P_R_max, busses, data.dispatchable_generators, storage, lines, linesDC and ror
 data.dispatchable.to_csv(run_parameter.export_folder + "zones.csv")
 data.storage.to_csv(run_parameter.export_folder + "storage.csv")
+final_res_series.to_csv(run_parameter.export_folder + "renewables.csv")
 #data.ac_lines.to_csv(run_parameter.export_folder + "lines.csv")
 data.ntc.to_csv(run_parameter.export_folder + "lines_NTC.csv")
 #todo ist das hier richtig? wofür:
@@ -284,7 +285,7 @@ with open(run_parameter.export_folder+'share_renewables.pkl', 'wb+') as f:
 #    pickle.dump(data.share_wind, f)
 #with open(run_parameter.export_folder+'share_solar.pkl', 'wb+') as f:
 #    pickle.dump(data.share_solar, f)
-data.ror_series.to_csv(run_parameter.export_folder + "ror_supply.csv")
+final_ror_series.to_csv(run_parameter.export_folder + "ror_supply.csv")
 print("The time difference is :", timeit.default_timer() - starttime)
 print("done")
 #model.optimize()

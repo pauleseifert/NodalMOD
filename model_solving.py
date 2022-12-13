@@ -6,12 +6,13 @@ from import_object_data_Zonal_Configuration import gurobi_variables, run_paramet
 run_parameter = run_parameter(scenario_name = "Offshore_Bidding_Zone_Scenario")
 
 match run_parameter.scen:
-    case "BAU":number_zones = 19
-    case "BZ2":number_zones = 20
-    case "BZ3":number_zones = 21
-    case "BZ5":number_zones = 23
+    case "BAU":number_zones = 20
+    case "BZ2":number_zones = 21
+    case "BZ3":number_zones = 22
+    case "BZ5":number_zones = 24
 
 model = gp.read(run_parameter.export_model_formulation)
+
 
 print("model read. setting parameters")
 
