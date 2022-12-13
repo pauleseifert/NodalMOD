@@ -25,21 +25,25 @@ class run_parameter:
             self.years = int(sys.argv[2])
             self.timesteps = int(sys.argv[3])
             self.scen = int(sys.argv[4])
-            self.sensitivit_scen = int(sys.argv[5])
+            self.sensitivity_scen = int(sys.argv[5])
         # local execution parameters
         elif (platform == "darwin") or (platform == "windows"):
             self.directory = ""
             self.case_name = scenario_name
             self.years = 3
-            self.timesteps = 10
+            self.timesteps = 504
             self.scen = 1
-            self.sensitivit_scen = 0
+            self.sensitivity_scen = 0
         self.solving = False
-        self.reduced_TS = False
-        self.export_model_formulation = self.directory + "results/" + self.case_name + "/model_formulation_scen"+ str(self.scen) +"_subscen" + str(self.sensitivit_scen)+".mps"
-        self.export_folder = self.directory + "results/" + self.case_name + "/" + str(self.scen) + "/" + "subscen" + str(self.sensitivit_scen) + "/"
-        self.import_folder = self.directory + "data/"
+        self.reduced_TS = True
+        self.export_model_formulation = self.directory + "results/" + self.case_name + "/model_formulation_scen" + str(self.scen) + "_subscen" + str(self.sensitivity_scen) + ".mps"
+        self.export_folder = self.directory + "results/" + self.case_name + "/" + str(self.scen) + "/" + "subscen" + str(self.sensitivity_scen) + "/"
+        self.data_folder = self.directory + "data/"
+        self.import_folder = self.data_folder + "energy_islands/"
         os.makedirs(self.export_folder, exist_ok=True)
+
+        self.hours = 504  # 21 representative days
+        self.scaling_factor = 8760 / self.hours
 
     def create_scenarios(self):
         match self.scen:
@@ -70,7 +74,7 @@ class run_parameter:
                              450000, 450000, 450000, 450000, 450000]})
                 print("Stakeholder case")
 
-        match self.sensitivit_scen:
+        match self.sensitivity_scen:
             case 0:
                 print("Base scenario sensitivity")
                 self.CO2_price = [80, 120, 160]
@@ -141,8 +145,8 @@ class model_data:
         lines_raw = pd.read_csv(run_parameter.import_folder + "PyPSA_elec1024/lines.csv", index_col=0)
         links_raw = pd.read_csv(run_parameter.import_folder + "PyPSA_elec1024/links.csv", index_col=0)
         load_raw = pd.read_csv(run_parameter.import_folder+ "PyPSA_elec1024/load.csv", index_col=0).reset_index(drop=True)
-        ror_ts = pd.read_csv(run_parameter.import_folder + "PyPSA_elec1024/hydro_ror_ts.csv", low_memory=False)
-        dam_maxsum_ts = pd.read_csv(run_parameter.import_folder + "PyPSA_elec1024/hydro_dam_ts.csv", low_memory=False)
+        ror_ts = pd.read_csv(run_parameter.import_folder + "timeseries/hydro_ror_ts.csv", low_memory=False)
+        dam_maxsum_ts = pd.read_csv(run_parameter.import_folder + "timeseries/hydro_dam_ts.csv", low_memory=False)
         hydro_database = pd.read_csv(run_parameter.import_folder+ "jrc-hydro-power-plant-database.csv")
 
         # cleaning the nodes dataframe
@@ -238,7 +242,7 @@ class model_data:
         # BE, FI have no limits on reservoir
         dam_unlimited = dam[dam["country"].isin(["BE", "FI"])]
         dam_limited = dam[~dam["country"].isin(["BE", "FI"])]
-        dam_limited = dam_limited.groupby(["bus"]).sum()[["P_inst"]].reset_index()
+        dam_limited = dam_limited.groupby(["bus"]).sum(numeric_only=True)[["P_inst"]].reset_index()
         self.reservoir = dam_limited.merge(self.nodes[["country", "bidding_zone"]], left_on = "bus", right_index = True)
         def clear_dam_ts(ts_raw, countries):
             target_year = ts_raw[ts_raw["y"] == 2018.0]
@@ -255,7 +259,7 @@ class model_data:
         # RoR
         ror = hydro_df[hydro_df["type"] == "HROR"]
         ror = ror.drop(["pumping_MW", "storage_capacity_MWh"], axis=1)
-        ror_aggregated = ror.groupby("bus").sum()[["P_inst"]].merge(self.nodes[["country", "bidding_zone"]], left_index = True, right_index = True)
+        ror_aggregated = ror.groupby("bus").sum(numeric_only=True)[["P_inst"]].merge(self.nodes[["country", "bidding_zone"]], left_index = True, right_index = True)
         def clear_hydro_ts(ts_raw, countries):
             target_year = ts_raw[ts_raw["y"] == 2018.0]
             filtered = target_year.drop(["y", "t", "technology"], axis=1).reset_index(drop=True)
@@ -287,11 +291,11 @@ class model_data:
 
         if reduced_ts:
             try:
-                u = pd.read_csv(run_parameter.import_folder + "poncelet/u_result.csv", index_col=0)
+                u = pd.read_csv(run_parameter.import_folder+ "clustering/u_result.csv", index_col=0)
                 u_index = u.index[u["value"] == 1.0].to_list()
                 self.timesteps_reduced_ts = 24*len(u_index)
             except:
-                sys.exit("need to run poncelet algorithm first!")
+                sys.exit("need to run clustering algorithm first!")
             self.res_series = {i: self.reduce_timeseries(self.res_series[i], u_index) for i in [0,1,2]}
             self.demand = {i:self.reduce_timeseries(self.demand[i], u_index) for i in [0,1,2]}
             self.share_solar = {i:self.reduce_timeseries(self.share_solar[i], u_index) for i in [0,1,2]}
@@ -322,7 +326,7 @@ class model_data:
     def conv_scaling_country_specific(self):
         conventional_h20 = self.dispatchable_generators[self.dispatchable_generators["type"].isin(["HDAM"])]
         conventional_fossil = self.dispatchable_generators[~self.dispatchable_generators["type"].isin(["HDAM"])]
-        conventional_fossil_grouped = conventional_fossil.groupby(["bidding_zone", "type"]).sum()["P_inst"]
+        conventional_fossil_grouped = conventional_fossil.groupby(["bidding_zone", "type"]).sum(numeric_only=True)["P_inst"]
 
         tyndp_installed_capacity = self.tyndp_installed_capacity.reset_index()
         #ausgabe
@@ -339,7 +343,7 @@ class model_data:
             new_chp = pd.concat([new_chp,new_entry])
         tyndp_installed_capacity = pd.concat([tyndp_without_chp, new_chp]).reset_index(drop = True)
 
-        tyndp_installed_capacity_regrouped = tyndp_installed_capacity.groupby(["node", "generator"]).sum()
+        tyndp_installed_capacity_regrouped = tyndp_installed_capacity.groupby(["node", "generator"]).sum(numeric_only=True)
 
         def get_conventional_yearly(tyndp_values, df_2020_capacity_bz, df_2020_capacity_bz_grouped, conventional_h20, year, i, CO2_price):
             df_scaled_capacity = df_2020_capacity_bz.copy()
@@ -435,7 +439,7 @@ class model_data:
             return y
 
         open_entrance_split["renewable"] = open_entrance_split.apply(lambda x: check_category(x), axis=1)
-        self.scaling_res = open_entrance_split[open_entrance_split["renewable"] == True].groupby(["Technology", "Region", "Year"], sort=False).sum().sort_index()
+        self.scaling_res = open_entrance_split[open_entrance_split["renewable"] == True].groupby(["Technology", "Region", "Year"], sort=False).sum(numeric_only=True).sort_index()
         self.scaling_res_separate = open_entrance_split_copy[open_entrance_split["renewable"] == True].groupby(["Technology", "Region", "Year"], sort=False).sum().sort_index()
 
         conventionals = open_entrance_split[open_entrance_split["renewable"] == False].groupby(["Technology", "Region", "Year"], sort=False).sum()
@@ -445,7 +449,7 @@ class model_data:
         tyndp_installed_capacity = pd.read_csv(path+"/TYNDP/capacity_tyndp2020-v04-al-2022_08_08.csv")
         tyndp_installed_capacity["node"] = tyndp_installed_capacity["node"].str.split("00", expand = True)[0]
         tyndp_installed_capacity["generator"] = tyndp_installed_capacity["generator"].replace({"otherres": "biomass"})
-        tyndp_installed_capacity = tyndp_installed_capacity.groupby(["node", "generator"]).sum().reset_index()
+        tyndp_installed_capacity = tyndp_installed_capacity.groupby(["node", "generator"]).sum(numeric_only=True).reset_index()
         tyndp_installed_capacity["node"] = tyndp_installed_capacity["node"].replace({"DKE1": "DK1", "DKW1":"DK2", "NOM1":"NO3", "NON1":"NO4", "NOS0":"NO1", "SE01":"SE1", "SE02":"SE2", "SE03":"SE3", "SE04":"SE4"})
         tyndp_installed_capacity = tyndp_installed_capacity[tyndp_installed_capacity["node"].isin(["BE", "CZ", "DE", "DK1", "DK2", "NL", "NO1", "NO3", "NO4", "PL", "SE1", "SE2", "SE3", "SE4", "UK", "FI"])].dropna(axis = 1).reset_index(drop=True)
         tyndp_installed_capacity.rename(columns = {"ga2030": 2030, "ga2040":2040, "2020":2020}, inplace=True)
@@ -686,9 +690,9 @@ class kpi_data:
         ## line loading
         self.line_loading.AC = {y: self.prepare_results_files_lines(y = y, file=self.F_AC, bus_raw=bus_raw, index_file=lines_overview, yearly=False, full_load_tolerance=0.01) for y in years}
         self.line_loading.DC = {y: self.prepare_results_files_lines(y = y, file=self.F_DC, bus_raw=bus_raw,index_file=lines_DC_overview, yearly=True, CAP_BH=self.CAP_lines, full_load_tolerance=0.01) for y in years}
-        self.line_loading.AC.update({"avg": (pd.concat([self.line_loading.AC[year][[0, "full_load_h"]] for year in run_parameter.years]).groupby(level=0).sum()/len(run_parameter.years)).merge(lines_overview[["from", "to"]], left_index = True, right_index = True).merge(bus_raw[["LAT","LON"]], left_on = "from", right_index =True).merge(bus_raw[["LAT","LON"]], left_on = "to", right_index =True).sort_index(ascending=True)})
+        self.line_loading.AC.update({"avg": (pd.concat([self.line_loading.AC[year][[0, "full_load_h"]] for year in run_parameter.years]).groupby(level=0).sum(numeric_only=True)/len(run_parameter.years)).merge(lines_overview[["from", "to"]], left_index = True, right_index = True).merge(bus_raw[["LAT","LON"]], left_on = "from", right_index =True).merge(bus_raw[["LAT","LON"]], left_on = "to", right_index =True).sort_index(ascending=True)})
         #self.line_loading.AC.update({"avg": (sum(self.line_loading.AC[year][0] for year in run_parameter.years)/len(run_parameter.years)).to_frame().merge(lines_overview[["from", "to"]], left_index = True, right_index = True).merge(bus_raw[["LAT","LON"]], left_on = "from", right_index =True).merge(bus_raw[["LAT","LON"]], left_on = "to", right_index =True).sort_index(ascending=True)})
-        self.line_loading.DC.update({"avg": (pd.concat([self.line_loading.DC[year][[0, "full_load_h"]] for year in run_parameter.years]).groupby(level=0).sum()/len(run_parameter.years)).merge(lines_DC_overview[["from", "to"]], left_index = True, right_index = True).merge(bus_raw[["LAT","LON"]], left_on = "from", right_index =True).merge(bus_raw[["LAT","LON"]], left_on = "to", right_index =True).sort_index(ascending=True)})
+        self.line_loading.DC.update({"avg": (pd.concat([self.line_loading.DC[year][[0, "full_load_h"]] for year in run_parameter.years]).groupby(level=0).sum(numeric_only=True)/len(run_parameter.years)).merge(lines_DC_overview[["from", "to"]], left_index = True, right_index = True).merge(bus_raw[["LAT","LON"]], left_on = "from", right_index =True).merge(bus_raw[["LAT","LON"]], left_on = "to", right_index =True).sort_index(ascending=True)})
         #self.line_loading.DC.update({"avg": (sum(self.line_loading.DC[year][0] for year in run_parameter.years)/len(run_parameter.years)).to_frame().merge(lines_DC_overview[["from", "to"]], left_index = True, right_index = True).merge(bus_raw[["LAT","LON"]], left_on = "from", right_index =True).merge(bus_raw[["LAT","LON"]], left_on = "to", right_index =True).sort_index(ascending=True)})
 
 
@@ -712,7 +716,7 @@ class kpi_data:
 
 
         # further calculations
-        ##overloaded lines -> > 70% load über die ganze periode, base case
+        #overloaded lines -> > 70% load über die ganze periode, base case
         if (run_parameter.subscen == 0) & (scen == 1):
             try:
                 overloaded_AC = self.line_loading.AC["avg"][self.line_loading.AC["avg"]["full_load_h"] >= 0.7 * 504]["full_load_h"]
@@ -723,43 +727,6 @@ class kpi_data:
                 overloaded_DC.to_csv(run_parameter.export_folder + str(1) + "/subscen" + str(run_parameter.subscen) + "/overloaded_lines_DC.csv")
             except:pass
 
-        #electrolyser
-        # if scen != 1:
-        #     self.electrolyser_location_last_year = self.CAP_E[[years[-1]]].merge(self.run_parameter.electrolyser[scen]["bus"], left_index=True, right_index=True).merge(bus_raw,left_on="bus",right_index=True)[[2, "LAT", "LON"]]
-        #     self.electrolyser_location_last_year.rename(columns={2: 0}, inplace=True)
-        #     self.CAP_E.index = run_parameter.electrolyser[scen]["name"]
-
-
-        # Line loading hours
-        # self.line_hours.AC = {y: self.line_fullload_hours(flow_file=self.F_AC[y], bus_raw=self.bus_raw, index_file=lines_overview,
-        #                                             flexlines_capacity="", tolerance=0.01) for y in years}
-        # self.line_hours.DC = {y: line_fullload_hours(flow_file=F_DC[y], bus_raw=bus_raw, index_file=lines_DC_overview,
-        #                                                flexlines_capacity=CAP_BH, tolerance=0.01) for y in years}
-        # P_flow_total[0] = sum(P_flow_yearly[y][0] for y in years) / len(years)
-        # P_flow_total[["from", "to", "LAT_x", "LON_x", "LAT_y", "LON_y"]] = P_flow_yearly[0][
-        #     ["from", "to", "LAT_x", "LON_x", "LAT_y", "LON_y"]]
-        # P_line_hours_total = sum(P_line_hours[y] for y in years)
-        # P_line_hours_total[["from", "to", "LAT_x", "LON_x", "LAT_y", "LON_y"]] = P_line_hours[0][
-        #     ["from", "to", "LAT_x", "LON_x", "LAT_y", "LON_y"]]
-        # P_line_hours_DC_total = sum(P_DC_line_hours[y] for y in years)
-        # P_line_hours_DC_total[["from", "to", "LAT_x", "LON_x", "LAT_y", "LON_y"]] = P_DC_line_hours[0][
-        #     ["from", "to", "LAT_x", "LON_x", "LAT_y", "LON_y"]]
-        # overloaded_AC_lines = P_line_hours_total[P_line_hours_total[0] >= 0.7 * 3 * 504][0]
-        # overloaded_DC_lines = P_line_hours_DC_total[P_line_hours_DC_total[0] >= 0.7 * 3 * 504][0]
-        #
-        # # sketchy, non volume weighted
-        # P_flow_total_bz = P_flow_total.merge(bus_raw[["country"]], how="left", left_on=["from"], right_index=True)
-        # P_flow_total_bz = P_flow_total_bz.merge(bus_raw[["country"]], how="left", left_on=["to"], right_index=True)
-        #
-        # # P_flow_total_bz = P_flow_total_bz.groupby("bidding zone", sort = False).mean().reset_index()
-        #
-        # P_flow_DC_total[0] = sum(P_flow_DC_yearly[y][0] for y in years) / len(years)
-        # P_flow_DC_total[["Pmax", "from", "to", "LAT_x", "LON_x", "LAT_y", "LON_y"]] = P_flow_DC_yearly[years[-1]][
-        #     ["Pmax", "from", "to", "LAT_x", "LON_x", "LAT_y", "LON_y"]]
-        #
-        # P_flow_DC_total_bz = P_flow_DC_total.merge(bus_raw[["country"]], how="left", left_on=["from"], right_index=True)
-        # P_flow_DC_total_bz = P_flow_DC_total_bz.merge(bus_raw[["country"]], how="left", left_on=["to"],
-        #                                               right_index=True)
 
     def dataframe_creator(self,run_parameter, dict, bus_raw):
         df = pd.DataFrame({year: dict[year].sum(axis=0) for year in run_parameter.years}).replace(0, np.nan).dropna(
@@ -857,7 +824,7 @@ class kpi_data:
             data_ei_individual = data_ei_matched[data_ei_matched["EI"] == EI]
             data_ei_from_bus = data_ei_individual.merge(lines_DC_overview[["from"]], how="left", left_index=True,right_index=True).set_index("from")
             data_ei_from_country = data_ei_from_bus.merge(bus_overview["country"], how="left", left_index=True,right_index=True).set_index("country")
-            aggregated_trade = data_ei_from_country.groupby("country", axis=0).sum()
+            aggregated_trade = data_ei_from_country.groupby("country", axis=0).sum(numeric_only=True)
             trade_to_bz.update({EI: aggregated_trade.iloc[:, :self.timesteps]})
         return trade_to_bz
 
@@ -872,7 +839,7 @@ class kpi_data:
         file_sum.index = file_sum.index.astype(int)
         file_frame = file_sum.to_frame()
         file_ready = file_frame.merge(bus_raw[["country"]], how="left", left_index=True, right_index=True)
-        file_ready_bz = file_ready.groupby("country", sort = False).sum()#.reset_index()
+        file_ready_bz = file_ready.groupby("country", sort = False).sum(numeric_only=True)#.reset_index()
         #file_ready_bz_resolved_names = file_ready_bz.merge(bidding_zones_encyclopedia, how="left", left_on="bidding zone",right_on="zone_number")[["bidding zones", 0]].set_index("bidding zones")
         return file_ready_bz
     def zonal_trade_balance_function(self, F_AC, F_DC, bus_raw, lines_overview, lines_DC_overview, scaling_factor):
@@ -883,7 +850,7 @@ class kpi_data:
         trade_balance_bz_total = trade_balance_bz_total.sort_values("country_to", axis=0)
         trade_balance_bz_total[0] = trade_balance_bz_total[0] * scaling_factor
         #exports - imports -> yes that is correct in the equation -> from defines where it starts == what country exports
-        zonal_trade_balance = trade_balance_bz_total.groupby("country_from").sum().sub(trade_balance_bz_total.groupby("country_to").sum(), fill_value=0)
+        zonal_trade_balance = trade_balance_bz_total.groupby("country_from").sum(numeric_only=True).sub(trade_balance_bz_total.groupby("country_to").sum(numeric_only=True), fill_value=0)
         return zonal_trade_balance
     def trade_balance(self, AC_balance, DC_balance):
         def change_direction(x):
@@ -896,7 +863,7 @@ class kpi_data:
         #balance = AC_balance.append(DC_balance).drop(AC_balance.index[AC_balance[0] == 0].tolist()) # append DC and drop zero loadings
         balance = pd.concat([AC_balance, DC_balance]).drop(AC_balance.index[AC_balance[0] == 0].tolist())
         magnitude = balance.apply(lambda x: change_direction(x), axis=1)
-        bz_balance = magnitude.groupby(["country_x", "country_y"], sort = True).sum()[0].reset_index()
+        bz_balance = magnitude.groupby(["country_x", "country_y"], sort = True).sum(numeric_only=True)[0].reset_index()
         bz_balance_rename = bz_balance.rename(columns = {"country_x":"country_to", "country_y":"country_from"})
         interconnectors = bz_balance_rename[bz_balance_rename["country_to"] != bz_balance_rename["country_from"]]
         return interconnectors
@@ -938,9 +905,6 @@ class comparison_data():
         text = response.text
         parsed = json.loads(text)
         self.data = {}
-        #self.capacity =
-        #test = parsed[17]["name"][0]["en"]
-        #test2 = pd.Series(parsed[1]["data"])
         for i in parsed[:-3]:
             print(i)
             self.data.update({i["name"][0]["en"]: pd.Series(i["data"])})

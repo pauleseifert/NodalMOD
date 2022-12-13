@@ -57,7 +57,7 @@ def append_BHEH(string):
 #     if string == "line":
 #         return pd.DataFrame({"name": ["BHEH-DE","BHEH-DK2", "BHEH-SE", "BHEH-PL" ], "fbus": [509, 1583, 5497, 4952], "tbus": [6127,6127,6127,6127], "rateA": [1000, 1000, 1000, 1000]})
 def merge_timeseries_supply(supply, timeseries):
-    supply= supply.groupby("bus").sum().reset_index()
+    supply= supply.groupby("bus").sum(numeric_only=True).reset_index()
     timeseries_T = timeseries.T
     timeseries_T.index = timeseries_T.index.astype(int)
     bus_ts_matrix = supply[["bus"]].merge(timeseries_T, how="left", left_on="bus", right_index=True).drop(['bus'], axis=1).T
@@ -523,7 +523,7 @@ def demand_columns(busses_filtered, load_raw, tyndp_demand):
     demand_T.index = demand_T.index.to_series().apply(lambda x: x.strip())
     demand_pypsa_merged = demand_T.merge(busses_filtered[["old_index", "bidding_zone"]], how= "inner", left_index = True, right_on= "old_index").drop(["old_index"], axis=1)
     def yearly_scaling(pypsa_demand_zones,tyndp_demand, i):
-        pypsa_zones_sum = pypsa_demand_zones.groupby("bidding_zone").sum().sum(axis=1)
+        pypsa_zones_sum = pypsa_demand_zones.groupby("bidding_zone").sum(numeric_only=True).sum(axis=1)
         #stupid aggregations because tyndp has NOS0 etc.
         pypsa_zones_sum["NO1"] = pypsa_zones_sum["NO1"] + pypsa_zones_sum["NO2"]+pypsa_zones_sum["NO5"]
         pypsa_zones_sum.drop(["NO2", "NO5"], inplace=True)
@@ -653,7 +653,7 @@ def res_normalisation(self, df, type):
     # test_tyndp = self.tyndp_installed_capacity
     normalised = df.copy()
     if type == "wind":
-        grouped_pypsa = df.groupby(["bidding_zone", "type"]).sum()["max"]
+        grouped_pypsa = df.groupby(["bidding_zone", "type"]).sum(numeric_only=True)["max"]
         # again the grouping of the NOS0
         grouped_pypsa.loc["NO1", "offwind"] = grouped_pypsa.loc["NO1", "offwind"] + grouped_pypsa.loc["NO2", "offwind"] + grouped_pypsa.loc["NO5", "offwind"]
         grouped_pypsa.loc["NO1", "onwind"] = grouped_pypsa.loc["NO1", "onwind"] + grouped_pypsa.loc["NO2", "onwind"] + grouped_pypsa.loc["NO5", "onwind"]
@@ -674,7 +674,7 @@ def res_normalisation(self, df, type):
                         normalised.loc[(normalised["type"] == subtype) & (normalised["bidding_zone"] == zone), "max"] = 0.00001
                         # normalised = pd.concat([normalised, df[(df["type"] == subtype) & (df["bidding_zone"] == zone)] * normalisation_factor])
     if type == "solar":
-        grouped_pypsa = df.groupby(["bidding_zone"]).sum()["max"]
+        grouped_pypsa = df.groupby(["bidding_zone"]).sum(numeric_only=True)["max"]
         grouped_pypsa.loc["NO1"] = grouped_pypsa.loc["NO1"] + grouped_pypsa.loc["NO2"] + grouped_pypsa.loc["NO5"]
         grouped_pypsa.drop(["NO2", "NO5"], inplace=True)
         for zone in grouped_pypsa.index.unique():
