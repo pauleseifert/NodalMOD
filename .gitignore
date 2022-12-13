@@ -139,6 +139,7 @@ dmypy.json
 cython_debug/
 
 #custom folders
-
 data/*
 results/*
+.vscode/*
+.idea/*

@@ -45,7 +45,7 @@ Z = data.reservoir_zonal_limit.index
 r = 0.04    #zinssatz
 T_line = 40     #Lifetime line
 T_elec = 30     #Lifetime electrolyser
-factor_opex = 0.02       #share of capex for opex each year
+factor_opex = 0.05       #share of capex for opex each year
 cost_line = 1950         #/MW/km
 dist_line = distance_line(bus_overview=data.nodes, line_overview=data.dc_lines, indices=I)
 eff_elec = 0.68
@@ -53,7 +53,7 @@ storage_efficiency = 0.8
 annuity_line = r/(1-(1/((1+r)**T_line)))
 annuity_elec = r/(1-(1/((1+r)**T_elec)))
 price_LL = 3000
-storage_penalty = 0.1
+storage_penalty = 0.001
 
 if run_parameter.reduced_TS:
     full_ts = data.timesteps_reduced_ts
