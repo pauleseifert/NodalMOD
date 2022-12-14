@@ -27,10 +27,13 @@ Z = list(range(len(data.nodes[run_parameter.scen].unique())))
 Z_dict = {}
 keys = range(len(data.nodes[run_parameter.scen].unique()))
 values = data.nodes[run_parameter.scen].unique()
-T = range(10)
+T = range(run_parameter.timesteps)
 for i in keys:
         Z_dict[i] = values[i]
 dict = {t: {z: model.getConstrByName("Injection_equality" + "[" + str(z) + "," + str(t) + "]").Pi for z in Z}for t in T}
+test = pd.DataFrame.from_dict(dict, orient = "index").reset_index()
+#sort value und dann load duration curve
+
 print("scenario "+str(run_parameter.scen)+ " with sensitivity scenario "+ str(run_parameter.sensitivity_scen)+ " has an objective value of "+ str(model.getObjective().getValue()))
 
 print("done")

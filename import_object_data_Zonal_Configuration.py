@@ -34,7 +34,7 @@ class run_parameter:
             self.case_name = scenario_name
             self.years = 1
             self.timesteps = 10
-            self.scen = "BZ2"
+            self.scen = "BAU"
             self.sensitivity_scen = 0
         self.solving = False
         self.reduced_TS = True
@@ -100,11 +100,46 @@ class model_data:
 
         #reading in NTCs
         #TODO: flexilines brauchen eine capacity zuweisung - Recherche? Offshore windfarms = Kinis Daten, BHEH =3000, NSEH1+2 = jeweils 10000
+        #match run_parameter.scen:
+            #case"BAU":self.ntc = pd.read_excel("data\\final_readin_data\\NTC_BAU.xlsx")
+            #case"BZ2":self.ntc = pd.read_excel("data\\final_readin_data\\NTC_BZ_2.xlsx")
+            #case"BZ3":self.ntc = pd.read_excel("data\\final_readin_data\\NTC_BZ_3.xlsx")
+            #case"BZ5":self.ntc = pd.read_excel("data\\final_readin_data\\NTC_BZ_5.xlsx")
+
+        # clean ntc duplicates
+        # BAU
+        ntc_BAU = pd.read_excel("data\\final_readin_data\\NTC_BAU.xlsx")
+        ntc_BAU['ac_dc_sum'] = ntc_BAU.groupby(['fromBAU', 'toBAU']).['Sum of max'].transform('sum')
+        #ntc_BAU['ac_dc_sum'] = ntc_BAU.groupby(['fromBAU', 'toBAU'] and ['toBAU', 'fromBAU']).['Sum of max'].transform('sum')
+        final_ntc_BAU = ntc_BAU.drop_duplicates(subset=['fromBAU', 'toBAU'])
+        final_ntc_BAU = final_ntc_BAU.sort_values('fromBAU')
         match run_parameter.scen:
-            case"BAU":self.ntc = pd.read_excel("data\\final_readin_data\\NTC_BAU.xlsx")
-            case"BZ2":self.ntc = pd.read_excel("data\\final_readin_data\\NTC_BZ_2.xlsx")
-            case"BZ3":self.ntc = pd.read_excel("data\\final_readin_data\\NTC_BZ_3.xlsx")
-            case"BZ5":self.ntc = pd.read_excel("data\\final_readin_data\\NTC_BZ_5.xlsx")
+            case "BAU": self.ntc = final_ntc_BAU
+
+        #ITERATE TROUGH COLUMN AND COMPARE
+
+        # BZ2
+        ntc_BZ2 = pd.read_excel("data\\final_readin_data\\NTC_BZ_2.xlsx")
+        ntc_BZ2['ac_dc_sum'] = ntc_BZ2.groupby(['fromBZ2', 'toBZ2'])['Sum of max'].transform('sum')
+        final_ntc_BZ2 = ntc_BZ2.drop_duplicates(subset=['fromBZ2', 'toBZ2'])
+        #final_ntc = final_ntc.sort_values(run_parameter.scen)
+        match run_parameter.scen:
+            case "BZ2": self.ntc = final_ntc_BZ2
+
+        # BZ3
+        ntc_BZ3 = pd.read_excel("data\\final_readin_data\\NTC_BZ_3.xlsx")
+        ntc_BZ3['ac_dc_sum'] = ntc_BZ3.groupby(['fromBZ3', 'toBZ3'])['Sum of max'].transform('sum')
+        final_ntc_BZ3 = ntc_BZ3.drop_duplicates(subset=['fromBZ3', 'toBZ3'])
+        #final_ntc = final_ntc.sort_values(run_parameter.scen)
+        match run_parameter.scen:
+            case "BZ3": self.ntc = final_ntc_BZ3
+        # BZ5
+        ntc_BZ5 = pd.read_excel("data\\final_readin_data\\NTC_BZ_5.xlsx")
+        ntc_BZ5['ac_dc_sum'] = ntc_BZ5.groupby(['fromBZ5', 'toBZ5'])['Sum of max'].transform('sum')
+        final_ntc_BZ5 = ntc_BZ5.drop_duplicates(subset=['fromBZ5', 'toBZ5'])
+        # final_ntc = final_ntc.sort_values(run_parameter.scen)
+        match run_parameter.scen:
+            case"BZ5": self.ntc = final_ntc_BZ5
 
         #DEMAND
         self.demand = pd.read_excel("data\\final_readin_data\\demand.xlsx")
@@ -658,7 +693,7 @@ class gurobi_variables:
             # P_C
             pd.DataFrame(self.results["P_C"][ :, :,z]).to_csv(folder + str(z) + "_P_C.csv")
             pd.DataFrame(self.results["P_C"][:, :, z]).to_excel(folder + str(z) + "_P_C.xlsx")
-
+            pd.DataFrame(self.results["P_C"][:, :, z]).to_excel(folder + str(z) + "_P_C.xlsx")
         #for c in m.getConstrs():
             #print(f"{c.VarName}: {c.Pi}")
 
