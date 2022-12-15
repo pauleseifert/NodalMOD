@@ -237,8 +237,8 @@ model.addConstrs((
 #     == demand_help(t,z) + gp.quicksum(S_inj[t, s] for s in S)for z in Z for t in T), name ="Injection_equality")
 
 #NTC flow
-model.addConstrs((F_NTC[t, f] <= data.ntc["Sum of max"][f] for f in F for t in T), name="NTC_max_cap_limit_in")
-model.addConstrs((F_NTC[t, f] >= -data.ntc["Sum of max"][f] for f in F for t in T), name="NTC_max_cap_limit_out")
+model.addConstrs((F_NTC[t, f] <= data.ntc["ac_dc_sum"][f] for f in F for t in T), name="NTC_max_cap_limit_in")
+model.addConstrs((F_NTC[t, f] >= -data.ntc["ac_dc_sum"][f] for f in F for t in T), name="NTC_max_cap_limit_out")
 
 #Limit CONV Generation
 model.addConstrs((P_CONV[t, g, z] <= dispatchable_help(Z_dict[z],G_dict[g]) for t in T for g in G for z in Z ), name="GenerationLimitUp")
