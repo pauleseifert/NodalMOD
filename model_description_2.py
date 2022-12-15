@@ -63,7 +63,7 @@ Y = range(run_parameter.years)
 Y_extra = range(1, run_parameter.years)
 Z = list(range(len(data.nodes[run_parameter.scen].unique())))
 G = list(range(len(final_dispatchable['type'].unique())))
-
+#x = data.nodes[run_parameter.scen].unique()
 #für die weiterverarbeitung müssen allen zonen und conventionals zahlen zugeordnet werden:
 Z_dict = {}
 keys = range(len(data.nodes[run_parameter.scen].unique()))

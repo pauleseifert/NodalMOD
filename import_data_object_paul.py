@@ -18,10 +18,7 @@ import sys
 
 class run_parameter:
     def __init__(self, scenario_name):
-<<<<<<< HEAD
         #hier werte je nach betrachtetem Szenario einfügen
-=======
->>>>>>> 1b769d4c7bf03f1fa26eae6ca45a4bb7987da854
         #capture batch system specific parameters for running on a cluster computer
         if platform == "linux" or platform == "linux2":
             self.directory = "/work/seifert/powerinvest/"       #patch on the cluster computer
@@ -37,7 +34,6 @@ class run_parameter:
             self.years = 3
             self.timesteps = 10
             self.scen = 1
-<<<<<<< HEAD
             self.sensitivity_scen = 0
             self.scen = 1 # hier szenario 5 erstellen für zonen
             self.sensitivit_scen = 0
@@ -52,17 +48,6 @@ class run_parameter:
         self.scaling_factor = 8760 / self.hours
 
 
-#je nachdem was oben bei scen eingetragen ist wird hier der case betrachtet
-=======
-            self.sensitivit_scen = 0
-        self.solving = False
-        self.reduced_TS = False
-        self.export_model_formulation = self.directory + "results/" + self.case_name + "/model_formulation_scen"+ str(self.scen) +"_subscen" + str(self.sensitivit_scen)+".mps"
-        self.export_folder = self.directory + "results/" + self.case_name + "/" + str(self.scen) + "/" + "subscen" + str(self.sensitivit_scen) + "/"
-        self.import_folder = self.directory + "data/"
-        os.makedirs(self.export_folder, exist_ok=True)
-
->>>>>>> 1b769d4c7bf03f1fa26eae6ca45a4bb7987da854
     def create_scenarios(self):
         match self.scen:
             case 1:
@@ -91,8 +76,6 @@ class run_parameter:
                     "cost": [645000, 645000, 645000, 450000, 450000, 450000, 450000, 450000, 450000, 450000, 450000, 450000,
                              450000, 450000, 450000, 450000, 450000]})
                 print("Stakeholder case")
-<<<<<<< HEAD
-#            case 5:  weiteren Case für Bidding Zones erstellen
 
 # je nachdem was oben bei sensitivity_scen eingetragen ist wird hier der case betrachtet
         match self.sensitivity_scen:
@@ -100,14 +83,13 @@ class run_parameter:
                 print("Base scenario sensitivity")
                 self.CO2_price = [80, 120, 160]
                 self.R_H = [108, 108, 108] #R_H = Revenue hydrogen
-=======
+
 
         match self.sensitivit_scen:
             case 0:
                 print("Base scenario sensitivity")
                 self.CO2_price = [80, 120, 160]
                 self.R_H = [108, 108, 108]
->>>>>>> 1b769d4c7bf03f1fa26eae6ca45a4bb7987da854
                 self.grid_extension = False
             case 1:
                 print("Low H2 price subscen")
@@ -131,19 +113,14 @@ class run_parameter:
                 self.grid_extension = True
         self.add_future_windcluster = True
         self.EI_bus = pd.DataFrame([
-<<<<<<< HEAD
             {"country": "BHEH", "y": 55.13615337829421, "x": 14.898639089359104, "p_nom_max": 3000, "bus": "BHEH", "carrier": "offwind-dc"},
             {"country": "NSEH1", "y": 55.22300, "x": 3.78700, "p_nom_max": 10000, "bus": "NSEH1", "carrier": "offwind-dc"},
             {"country": "NSEH2", "y": 55.69354, "x": 3.97940, "p_nom_max": 10000, "bus": "NSEH2", "carrier": "offwind-dc"}], index=["BHEH", "NSEH1", "NSEH2"])
-=======
-            {"country": "BHEH", "y": 55.13615337829421, "x": 14.898639089359104},
-            {"country": "NSEH1", "y": 55.22300, "x": 3.78700},
-            {"country": "NSEH2", "y": 55.69354, "x": 3.97940}], index=["BHEH", "NSEH1", "NSEH2"])
         self.EI_capacity = pd.DataFrame([
             {"p_nom_max": 3000, "bus": "BHEH", "carrier": "offwind-dc"},
             {"p_nom_max": 10000, "bus": "NSEH1", "carrier": "offwind-dc"},
             {"p_nom_max": 10000, "bus": "NSEH2", "carrier": "offwind-dc"}])
->>>>>>> 1b769d4c7bf03f1fa26eae6ca45a4bb7987da854
+
         self.added_DC_lines = pd.DataFrame(
             {"p_nom": [1400, 2000, 2000, 700], "length": [720, 267, 400, 300], "index_x": [299, 198, 170, 513],
              "index_y": [419, 111, 93, 116], "tags": [
@@ -158,11 +135,7 @@ class run_parameter:
             {"Pmax": [500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500],
              "from": [523, 523, 523, 523, 523, 523, 523, 522, 522, 522, 522, 522, 522, 521, 521, 521, 521],
              "to": [522, 403, 212, 209, 170, 376, 357, 279, 170, 103, 24, 357, 376, 62, 467, 218, 513],
-<<<<<<< HEAD
              "EI": ["NSEH1", "NSEH1", "NSEH1", "NSEH1", "NSEH1", "NSEH1", "NSEH1", "NSEH2", "NSEH2", "NSEH2", "NSEH2", "NSEH2", "NSEH2", "BHEH", "BHEH", "BHEH", "BHEH"]})
-=======
-             "EI": [1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0]})
->>>>>>> 1b769d4c7bf03f1fa26eae6ca45a4bb7987da854
 
         self.TRM = 0.7
         self.country_selection = ['BE', 'CZ', 'DE', 'DK', 'FI', 'NL', 'NO', 'PL', 'SE', 'UK', "NSEH1", "NSEH2", "BHEH"]
@@ -199,7 +172,6 @@ class model_data:
         self.nodes = busses_filtered
 
         # resolve bidding zones in NO and SE
-<<<<<<< HEAD
         if (("NO") or ("SE") or ("DK")) in run_parameter.country_selection:
             self.resolve_bidding_zones()
         else:
@@ -222,7 +194,7 @@ class model_data:
         wind_filtered = wind_matched[["p_nom_max", "carrier","index", "country", "bidding_zone"]].reset_index(drop=True)
         wind_filtered.columns = ["max", "type", "bus", "country", "bidding_zone"]
         wind_filtered = wind_filtered.replace({"onwind": "onwind", "offwind-ac": "offwind", "offwind-dc": "offwind"})
-=======
+
         self.resolve_bidding_zones()
 
         #cleaning the conventional plants
@@ -244,7 +216,7 @@ class model_data:
         wind_filtered.columns = ["max", "type", "mc", "bus", "country", "bidding_zone"]
         wind_filtered = wind_filtered.replace({"onwind": "onwind", "offwind-ac": "offwind", "offwind-dc": "offwind"})
         wind_filtered["bus"] = wind_filtered["bus"].astype(int)
->>>>>>> 1b769d4c7bf03f1fa26eae6ca45a4bb7987da854
+
 
         lines_matched = lines_raw.merge(self.nodes[["index", "old_index"]], how="left", left_on="bus0",right_on="old_index")
         lines_matched = lines_matched.merge(self.nodes[["index", "old_index"]], how="left", left_on="bus1",right_on="old_index")
@@ -278,11 +250,7 @@ class model_data:
         self.dc_lines = lines_DC
 
 
-<<<<<<< HEAD
-        # load TYNDP values (DEMAND!!!) auf 2030 begrenzen
-=======
         # load TYNDP values
->>>>>>> 1b769d4c7bf03f1fa26eae6ca45a4bb7987da854
         self.tyndp_values(path=run_parameter.import_folder, bidding_zone_encyc=run_parameter.bidding_zones_overview)
 
         # new demand
@@ -309,12 +277,11 @@ class model_data:
         dam = dam.drop(["pumping_MW", "storage_capacity_MWh"], axis=1)
         # BE, FI have no limits on reservoir
         dam_unlimited = dam[dam["country"].isin(["BE", "FI"])]
-        dam_limited = dam[~dam["country"].isin(["BE", "FI"])]
-<<<<<<< HEAD
+
         dam_limited = dam_limited.groupby(["bus"]).sum(numeric_only = True)[["P_inst"]].reset_index()
-=======
+
         dam_limited = dam_limited.groupby(["bus"]).sum()[["P_inst"]].reset_index()
->>>>>>> 1b769d4c7bf03f1fa26eae6ca45a4bb7987da854
+
         self.reservoir = dam_limited.merge(self.nodes[["country", "bidding_zone"]], left_on = "bus", right_index = True)
         def clear_dam_ts(ts_raw, countries):
             target_year = ts_raw[ts_raw["y"] == 2018.0]
@@ -331,11 +298,9 @@ class model_data:
         # RoR
         ror = hydro_df[hydro_df["type"] == "HROR"]
         ror = ror.drop(["pumping_MW", "storage_capacity_MWh"], axis=1)
-<<<<<<< HEAD
         ror_aggregated = ror.groupby("bus").sum(numeric_only = True)[["P_inst"]].merge(self.nodes[["country", "bidding_zone"]], left_index = True, right_index = True)
-=======
         ror_aggregated = ror.groupby("bus").sum()[["P_inst"]].merge(self.nodes[["country", "bidding_zone"]], left_index = True, right_index = True)
->>>>>>> 1b769d4c7bf03f1fa26eae6ca45a4bb7987da854
+
         def clear_hydro_ts(ts_raw, countries):
             target_year = ts_raw[ts_raw["y"] == 2018.0]
             filtered = target_year.drop(["y", "t", "technology"], axis=1).reset_index(drop=True)
@@ -399,17 +364,17 @@ class model_data:
                 pickle.dump(self.res_series, f)
 
 
-<<<<<<< HEAD
+
     def conv_scaling_country_specific(self): #??? was macht das?
         conventional_h20 = self.dispatchable_generators[self.dispatchable_generators["type"].isin(["HDAM"])]
         conventional_fossil = self.dispatchable_generators[~self.dispatchable_generators["type"].isin(["HDAM"])]
         conventional_fossil_grouped = conventional_fossil.groupby(["bidding_zone", "type"]).sum(numeric_only = True)["P_inst"]
-=======
+
     def conv_scaling_country_specific(self):
         conventional_h20 = self.dispatchable_generators[self.dispatchable_generators["type"].isin(["HDAM"])]
         conventional_fossil = self.dispatchable_generators[~self.dispatchable_generators["type"].isin(["HDAM"])]
         conventional_fossil_grouped = conventional_fossil.groupby(["bidding_zone", "type"]).sum()["P_inst"]
->>>>>>> 1b769d4c7bf03f1fa26eae6ca45a4bb7987da854
+
 
         tyndp_installed_capacity = self.tyndp_installed_capacity.reset_index()
         #ausgabe
@@ -425,12 +390,8 @@ class model_data:
             new_entry["generator"] = type
             new_chp = pd.concat([new_chp,new_entry])
         tyndp_installed_capacity = pd.concat([tyndp_without_chp, new_chp]).reset_index(drop = True)
-
-<<<<<<< HEAD
         tyndp_installed_capacity_regrouped = tyndp_installed_capacity.groupby(["node", "generator"]).sum(numeric_only = True)
-=======
         tyndp_installed_capacity_regrouped = tyndp_installed_capacity.groupby(["node", "generator"]).sum()
->>>>>>> 1b769d4c7bf03f1fa26eae6ca45a4bb7987da854
 
         def get_conventional_yearly(tyndp_values, df_2020_capacity_bz, df_2020_capacity_bz_grouped, conventional_h20, year, i, CO2_price):
             df_scaled_capacity = df_2020_capacity_bz.copy()
@@ -536,11 +497,9 @@ class model_data:
         tyndp_installed_capacity = pd.read_csv(path+"/TYNDP/capacity_tyndp2020-v04-al-2022_08_08.csv")
         tyndp_installed_capacity["node"] = tyndp_installed_capacity["node"].str.split("00", expand = True)[0]
         tyndp_installed_capacity["generator"] = tyndp_installed_capacity["generator"].replace({"otherres": "biomass"})
-<<<<<<< HEAD
         tyndp_installed_capacity = tyndp_installed_capacity.groupby(["node", "generator"]).sum(numeric_only = True).reset_index()
-=======
+
         tyndp_installed_capacity = tyndp_installed_capacity.groupby(["node", "generator"]).sum().reset_index()
->>>>>>> 1b769d4c7bf03f1fa26eae6ca45a4bb7987da854
         tyndp_installed_capacity["node"] = tyndp_installed_capacity["node"].replace({"DKE1": "DK1", "DKW1":"DK2", "NOM1":"NO3", "NON1":"NO4", "NOS0":"NO1", "SE01":"SE1", "SE02":"SE2", "SE03":"SE3", "SE04":"SE4"})
         tyndp_installed_capacity = tyndp_installed_capacity[tyndp_installed_capacity["node"].isin(["BE", "CZ", "DE", "DK1", "DK2", "NL", "NO1", "NO3", "NO4", "PL", "SE1", "SE2", "SE3", "SE4", "UK", "FI"])].dropna(axis = 1).reset_index(drop=True)
         tyndp_installed_capacity.rename(columns = {"ga2030": 2030, "ga2040":2040, "2020":2020}, inplace=True)
@@ -568,7 +527,6 @@ class model_data:
         return short_ts.reset_index(drop=True)
 
     def resolve_bidding_zones(self):
-<<<<<<< HEAD
         try:
             import geopandas as gpd
             scandinavian_bidding_zones = gpd.read_file("data/shapes/scandinavian_bidding_zones.geojson").set_index("bidding_zone")
@@ -588,7 +546,7 @@ class model_data:
         nodes_other_bidding_zone = nodes_geopandas[~nodes_geopandas["country"].isin(scandinavian_bidding_zones["country"])]
         nodes_other_bidding_zone["bidding_zone"] = nodes_other_bidding_zone["country"]
         self.nodes= pd.concat([nodes_scand_bidding_zones_resolved, nodes_other_bidding_zone]).drop(columns="geometry").sort_index()
-=======
+
         busses_NO = self.nodes[self.nodes["country"] == "NO"]
         busses_SE = self.nodes[self.nodes["country"] == "SE"]
         busses_DK = self.nodes[self.nodes["country"] == "DK"]
@@ -611,7 +569,7 @@ class model_data:
 
         busses_others["bidding_zone"] = busses_others["country"]
         self.nodes = pd.concat([busses_norge.drop(["zone"], axis=1), busses_SE.drop(["zone"], axis=1), busses_DK.drop(["zone"], axis=1), busses_others]).sort_index()
->>>>>>> 1b769d4c7bf03f1fa26eae6ca45a4bb7987da854
+
 
     def extend_overloaded_lines(self, type, case_name):
         #{index, hours_with_overload_in_3_years}

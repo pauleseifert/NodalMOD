@@ -1,6 +1,9 @@
 import geopandas as gpd
 import pandas as pd
+from import_object_data_Zonal_Configuration import model_data, run_parameter
 
+
+run_parameter = run_parameter(scenario_name = "Offshore_Bidding_Zone_Scenario")
 
 #zones festlegen, als set und zuordnung zu den nodes
 shapes = gpd.read_file('data/shapes/NUTS_RG_10M_2021_4326.geojson')
@@ -97,5 +100,33 @@ df_nodes['BZ_5'] = df_nodes.apply(lambda row: lookup(row), axis=1)
 df_nodes_to_zones = df_nodes
 df_nodes.to_csv('df_nodes.csv')
 
-#generators mergen mit den
+#plotting average marginal costs
 
+#nodes = pd.read_csv("data\\final_readin_data\\generators.csv", index_col=0)
+generation = pd.read_csv("data\\\PyPSA_elec1024\\generators.csv", index_col=0)
+dispatchables = pd.read_excel("data\\final_readin_data\\dispatchable.xlsx")
+dispatchables_mc = dispatchables.loc[dispatchables.groupby(["type"])]
+dispatchables_mc = dispatchables.groupby(['mc', 'type'])
+dispatchables_mc = dispatchables.drop_duplicates(subset=['mc', 'type'])
+dispatchables_mc= dispatchables_mc.sort_values('type')
+dispatchables_mc_final = dispatchables_mc.loc[:,["type","mc"]].reset_index(drop=True)
+#df = pd.read_excel("results\\self.case_name\\run_parameter.scen\\subscen"+ run_parameter.sensitivity_scen + ".csv")
+df_results_generation = pd.read_excel("results/"+ str(run_parameter.case_name) +"/"+ str(run_parameter.scen) +"/subscen"+ str(run_parameter.sensitivity_scen) + "/0_P_C.xlsx", index_col=0)
+conv_dict = {0: 'CCGT',
+             1: 'coal',
+             2: 'biomass',
+             3: 'HDAM',
+             4: 'OCGT',
+             5: 'nuclear',
+             6: 'lignite',
+             7: 'oil'}
+
+# rename columns in DataFrame using dictionary
+df_results_generation.rename(columns=conv_dict, inplace=True)
+df_results_generation.sum()
+mc_calc = df_results_generation.sum().mul(dispatchables_mc_final, axis = 0)
+mc_calc = dispatchables_mc_final.set_index('type').join(df_results_generation.set_index(columns))
+dispatchables_mc_final.to_excel("mc_conv.xlsx")
+df = df_results_generation.set_index().transpose()
+df_2 = df.reset_index(inplace=True)
+df = df.merge(dispatchables_mc_final, on='type')
