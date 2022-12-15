@@ -34,7 +34,7 @@ class run_parameter:
             self.case_name = scenario_name
             self.years = 1
             self.timesteps = 10
-            self.scen = "BZ5"
+            self.scen = "BZ2"
             self.sensitivity_scen = 0
         self.solving = False
         self.reduced_TS = True

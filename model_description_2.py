@@ -88,7 +88,7 @@ F = data.ntc.index
 #Parameters
 storage_efficiency = 0.8
 price_LL = 3000
-penalty_curtailment = 100
+penalty_curtailment = 10
 storage_penalty = 0.1
 marginal_costs = final_dispatchable.set_index('type').to_dict()['mc']
 #eff_elec = 0.68
@@ -216,8 +216,8 @@ model.addConstrs((
     +P_DAM[t, z]
     +S_ext[t, z]
     +ror_help(t,z)
-    +gp.quicksum(F_NTC[t, f] for f in encyc_NTC_from[Z_dict[z]] for t in T)
-    -gp.quicksum(F_NTC[t, f] for f in encyc_NTC_to[Z_dict[z]] for t in T)
+    +gp.quicksum(F_NTC[t, f] for f in encyc_NTC_from[Z_dict[z]])
+    -gp.quicksum(F_NTC[t, f] for f in encyc_NTC_to[Z_dict[z]])
     +p_load_lost[t, z]
      == demand_help(t,Z_dict[z]) + S_inj[t, z] for z in Z for t in T), name ="Injection_equality")
 

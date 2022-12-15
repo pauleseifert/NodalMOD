@@ -19,6 +19,8 @@ model.optimize()
 
 
 
+
+
 variables = gurobi_variables(solved_model=model)
 variables.export_csv(folder = run_parameter.export_folder, scen=run_parameter.scen, number_zones=number_zones)
 #list(range(len(data.nodes[run_parameter.scen].unique())))
@@ -32,7 +34,6 @@ for i in keys:
         Z_dict[i] = values[i]
 dict = {t: {z: model.getConstrByName("Injection_equality" + "[" + str(z) + "," + str(t) + "]").Pi for z in Z}for t in T}
 test = pd.DataFrame.from_dict(dict, orient = "index").reset_index()
-#sort value und dann load duration curve
 
 print("scenario "+str(run_parameter.scen)+ " with sensitivity scenario "+ str(run_parameter.sensitivity_scen)+ " has an objective value of "+ str(model.getObjective().getValue()))
 
