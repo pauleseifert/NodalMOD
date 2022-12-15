@@ -171,6 +171,7 @@ delta = 8760/full_ts
 encyc_NTC_from = create_encyclopedia(data.ntc["from" + run_parameter.scen])
 encyc_NTC_to = create_encyclopedia(data.ntc["to" + run_parameter.scen])
 
+x = data.ntc
 
 res_series_zones = dict()
 for k in final_res_series.columns.to_list():
@@ -216,8 +217,10 @@ model.addConstrs((
     +P_DAM[t, z]
     +S_ext[t, z]
     +ror_help(t,z)
-    +gp.quicksum(F_NTC[t, f] for f in encyc_NTC_from[Z_dict[z]])
-    -gp.quicksum(F_NTC[t, f] for f in encyc_NTC_to[Z_dict[z]])
+    +gp.quicksum( F_NTC[t, f] for f in encyc_NTC_from[Z_dict[z]]) #for t in T)
+    -gp.quicksum( F_NTC[t, f] for f in encyc_NTC_to[Z_dict[z]]) #for t in T)
+     #+F_NTC[t, f] for f in encyc_NTC_from[Z_dict[z]]
+     #-F_NTC[t, f] for f in encyc_NTC_to[Z_dict[z]]
     +p_load_lost[t, z]
      == demand_help(t,Z_dict[z]) + S_inj[t, z] for z in Z for t in T), name ="Injection_equality")
 
@@ -274,17 +277,17 @@ except:
 # necessary files: P_R_max, busses, data.dispatchable_generators, storage, lines, linesDC and ror
 data.dispatchable.to_csv(run_parameter.export_folder + "zones.csv")
 data.storage.to_csv(run_parameter.export_folder + "storage.csv")
+final_res_series.to_csv(run_parameter.export_folder + "renewables.csv")
+final_demand.to_csv(run_parameter.export_folder + "demand.csv")
 #data.ac_lines.to_csv(run_parameter.export_folder + "lines.csv")
 data.ntc.to_csv(run_parameter.export_folder + "lines_NTC.csv")
 #todo ist das hier richtig? wofür:
-with open(run_parameter.export_folder+'share_renewables.pkl', 'wb+') as f:
-    pickle.dump(data.res_series, f)
-
-#with open(run_parameter.export_folder+'share_wind.pkl', 'wb+') as f:
-#    pickle.dump(data.share_wind, f)
-#with open(run_parameter.export_folder+'share_solar.pkl', 'wb+') as f:
-#    pickle.dump(data.share_solar, f)
-data.ror_series.to_csv(run_parameter.export_folder + "ror_supply.csv")
+with open(run_parameter.export_folder+'share_renewables.pkl', 'wb+') as f:pickle.dump(data.res_series, f)
+#with open(run_parameter.export_folder+'share_wind.pkl', 'wb+') as f:pickle.dump(data.share_wind, f)
+#with open(run_parameter.export_folder+'share_solar.pkl', 'wb+') as f:pickle.dump(data.share_solar, f)
+final_ror_series.to_csv(run_parameter.export_folder + "ror_supply.csv")
+final_ror_series.to_csv(run_parameter.export_folder + "ror_supply.csv")
+final_ror_series.to_csv(run_parameter.export_folder + "ror_supply.csv")
 print("The time difference is :", timeit.default_timer() - starttime)
 print("done")
 #model.optimize()
