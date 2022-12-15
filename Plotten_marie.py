@@ -11,7 +11,10 @@ import plotly.graph_objects as go
 from colour import Color
 import pandas as pd
 from import_object_data_Zonal_Configuration import model_data, run_parameter
+from matplotlib import font_manager
 
+
+#plt.rcParams["font.family"] = "Times New Roman"
 
 run_parameter = run_parameter(scenario_name = "Offshore_Bidding_Zone_Scenario")
 data = model_data(create_res = False,reduced_ts = False, export_files= False, run_parameter = run_parameter)
@@ -272,12 +275,11 @@ match plot:
         fig.add_trace(go.Scatter(x=df_res_wind.index, y= df_res_wind.tolist(),name='Wind', fill='tonexty', stackgroup='one', mode='none', fillcolor="rgba(0, 0, 255, 0.8)"))
         fig.add_trace(go.Scatter(x=df_res_solar.index, y= df_res_solar.tolist(),name='Solar', fill='tonexty', stackgroup='one', mode='none', fillcolor="rgb(255, 252, 38)"))
 
-
         fig.update_layout(
-            xaxis= dict(title='Timesteps',dtick=24),
-            yaxis=dict(title='Generation [GW]'),
+            xaxis= dict(title='Timesteps',dtick=24),#.format(font='Times New Roman'),
+            yaxis=dict(title='Generation [GW]'),#.format(font='Times New Roman'),
             font = dict(size = 30,
-                            #family = "Serif"
+                            family = "Times New Roman"
                             ),
             legend=dict(x=0, y=-0.2, bgcolor='rgba(255, 255, 255, 0)', bordercolor='rgba(255, 255, 255, 0)',font_size = 22),
             legend_orientation="h",
@@ -422,6 +424,7 @@ match plot:
           #  p.set_title("Price duration", fontsize=30)
             p.set_xlabel("Time [h]", fontsize=15)
             p.set_ylabel("Price [€/MWh]", fontsize=15)
+            p.font = dict(family="Times New Roman"),
  #           p.legend()
   #          p.set_style("whitegrid")
             plt.show()

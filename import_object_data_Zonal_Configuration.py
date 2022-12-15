@@ -33,7 +33,7 @@ class run_parameter:
             self.directory = ""
             self.case_name = scenario_name
             self.years = 1
-            self.timesteps = 10
+            self.timesteps = 504
             self.scen = "BZ2"
             self.sensitivity_scen = 0
         self.solving = False
@@ -109,38 +109,38 @@ class model_data:
 
         # clean ntc duplicates
         # BAU
-        ntc_BAU = pd.read_excel("data\\final_readin_data\\NTC_BAU.xlsx")
-        ntc_BAU['ac_dc_sum'] = ntc_BAU.groupby(['fromBAU', 'toBAU'])['Sum of max'].transform('sum')
+        #ntc_BAU = pd.read_excel("data\\final_readin_data\\NTC_BAU.xlsx")
+        #ntc_BAU['ac_dc_sum'] = ntc_BAU.groupby(['fromBAU', 'toBAU'])['Sum of max'].transform('sum')
         #ntc_BAU['ac_dc_sum'] = ntc_BAU.groupby(['fromBAU', 'toBAU'] and ['toBAU', 'fromBAU']).['Sum of max'].transform('sum')
-        final_ntc_BAU = ntc_BAU.drop_duplicates(subset=['fromBAU', 'toBAU'])
-        final_ntc_BAU = final_ntc_BAU.sort_values('fromBAU')
+        #final_ntc_BAU = ntc_BAU.drop_duplicates(subset=['fromBAU', 'toBAU'])
+        #final_ntc_BAU = final_ntc_BAU.sort_values('fromBAU')
         #match run_parameter.scen:
             #case "BAU": self.ntc = final_ntc_BAU
 
         #ITERATE TROUGH COLUMN AND COMPARE
-        final_ntc_BAU.to_excel("final_ntc_BAU.xlsx")
+        #final_ntc_BAU.to_excel("final_ntc_BAU.xlsx")
         # BZ2
-        ntc_BZ2 = pd.read_excel("data\\final_readin_data\\NTC_BZ_2.xlsx")
-        ntc_BZ2['ac_dc_sum'] = ntc_BZ2.groupby(['fromBZ2', 'toBZ2'])['Sum of max'].transform('sum')
-        final_ntc_BZ2 = ntc_BZ2.drop_duplicates(subset=['fromBZ2', 'toBZ2'])
+        #ntc_BZ2 = pd.read_excel("data\\final_readin_data\\NTC_BZ_2.xlsx")
+        #ntc_BZ2['ac_dc_sum'] = ntc_BZ2.groupby(['fromBZ2', 'toBZ2'])['Sum of max'].transform('sum')
+        #final_ntc_BZ2 = ntc_BZ2.drop_duplicates(subset=['fromBZ2', 'toBZ2'])
         #final_ntc = final_ntc.sort_values(run_parameter.scen)
         #match run_parameter.scen:
             #case "BZ2": self.ntc = final_ntc_BZ2
         #final_ntc_BZ2.to_excel("final_ntc_BZ2.xlsx")
         # BZ3
-        ntc_BZ3 = pd.read_excel("data\\final_readin_data\\NTC_BZ_3.xlsx")
-        ntc_BZ3['ac_dc_sum'] = ntc_BZ3.groupby(['fromBZ3', 'toBZ3'])['Sum of max'].transform('sum')
-        final_ntc_BZ3 = ntc_BZ3.drop_duplicates(subset=['fromBZ3', 'toBZ3'])
-        final_ntc_BZ3 = final_ntc_BZ3.sort_values('fromBZ3')
+        #ntc_BZ3 = pd.read_excel("data\\final_readin_data\\NTC_BZ_3.xlsx")
+        #ntc_BZ3['ac_dc_sum'] = ntc_BZ3.groupby(['fromBZ3', 'toBZ3'])['Sum of max'].transform('sum')
+        #final_ntc_BZ3 = ntc_BZ3.drop_duplicates(subset=['fromBZ3', 'toBZ3'])
+        #final_ntc_BZ3 = final_ntc_BZ3.sort_values('fromBZ3')
         #match run_parameter.scen:
             #case "BZ3": self.ntc = final_ntc_BZ3
         #final_ntc_BZ3.to_excel("final_ntc_BZ3.xlsx")
 
         # BZ5
-        ntc_BZ5 = pd.read_excel("data\\final_readin_data\\NTC_BZ_5.xlsx")
-        ntc_BZ5['ac_dc_sum'] = ntc_BZ5.groupby(['fromBZ5', 'toBZ5'])['Sum of max'].transform('sum')
-        final_ntc_BZ5 = ntc_BZ5.drop_duplicates(subset=['fromBZ5', 'toBZ5'])
-        final_ntc_BZ5 = final_ntc_BZ5.sort_values('fromBZ5')
+        #ntc_BZ5 = pd.read_excel("data\\final_readin_data\\NTC_BZ_5.xlsx")
+        #ntc_BZ5['ac_dc_sum'] = ntc_BZ5.groupby(['fromBZ5', 'toBZ5'])['Sum of max'].transform('sum')
+        #final_ntc_BZ5 = ntc_BZ5.drop_duplicates(subset=['fromBZ5', 'toBZ5'])
+        #final_ntc_BZ5 = final_ntc_BZ5.sort_values('fromBZ5')
         #match run_parameter.scen:
             #case"BZ5": self.ntc = final_ntc_BZ5
         #final_ntc_BZ5.to_excel("final_ntc_BZ5.xlsx")

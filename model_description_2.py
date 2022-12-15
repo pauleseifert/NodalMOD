@@ -286,8 +286,6 @@ with open(run_parameter.export_folder+'share_renewables.pkl', 'wb+') as f:pickle
 #with open(run_parameter.export_folder+'share_wind.pkl', 'wb+') as f:pickle.dump(data.share_wind, f)
 #with open(run_parameter.export_folder+'share_solar.pkl', 'wb+') as f:pickle.dump(data.share_solar, f)
 final_ror_series.to_csv(run_parameter.export_folder + "ror_supply.csv")
-final_ror_series.to_csv(run_parameter.export_folder + "ror_supply.csv")
-final_ror_series.to_csv(run_parameter.export_folder + "ror_supply.csv")
 print("The time difference is :", timeit.default_timer() - starttime)
 print("done")
 #model.optimize()
