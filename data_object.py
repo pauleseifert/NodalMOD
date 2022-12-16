@@ -32,7 +32,7 @@ class run_parameter:
             self.case_name = scenario_name
             self.years = 3
             self.timesteps = 504
-            self.scen = 1
+            self.scen = 2
             self.sensitivity_scen = 0
         self.solving = False
         self.reduced_TS = True
@@ -612,8 +612,8 @@ class model_data:
 class kpi_data:
     def __init__(self, run_parameter, scen):
         self.run_parameter = run_parameter
-        years = self.run_parameter.years
-        read_folder = run_parameter.read_folder = run_parameter.directory + "results/" + run_parameter.case_name + "/" + str(scen) + "/subscen" +str(run_parameter.subscen) + "/"
+        years = range(self.run_parameter.years)
+        read_folder = run_parameter.read_folder = run_parameter.directory + "results/" + run_parameter.case_name + "/" + str(scen) + "/subscen" +str(run_parameter.sensitivity_scen) + "/"
         self.bus = pd.read_csv(read_folder + "busses.csv", index_col=0)
 
         #create empty objects
@@ -690,9 +690,9 @@ class kpi_data:
         ## line loading
         self.line_loading.AC = {y: self.prepare_results_files_lines(y = y, file=self.F_AC, bus_raw=bus_raw, index_file=lines_overview, yearly=False, full_load_tolerance=0.01) for y in years}
         self.line_loading.DC = {y: self.prepare_results_files_lines(y = y, file=self.F_DC, bus_raw=bus_raw,index_file=lines_DC_overview, yearly=True, CAP_BH=self.CAP_lines, full_load_tolerance=0.01) for y in years}
-        self.line_loading.AC.update({"avg": (pd.concat([self.line_loading.AC[year][[0, "full_load_h"]] for year in run_parameter.years]).groupby(level=0).sum(numeric_only=True)/len(run_parameter.years)).merge(lines_overview[["from", "to"]], left_index = True, right_index = True).merge(bus_raw[["LAT","LON"]], left_on = "from", right_index =True).merge(bus_raw[["LAT","LON"]], left_on = "to", right_index =True).sort_index(ascending=True)})
+        self.line_loading.AC.update({"avg": (pd.concat([self.line_loading.AC[year][[0, "full_load_h"]] for year in years]).groupby(level=0).sum(numeric_only=True)/len(years)).merge(lines_overview[["from", "to"]], left_index = True, right_index = True).merge(bus_raw[["LAT","LON"]], left_on = "from", right_index =True).merge(bus_raw[["LAT","LON"]], left_on = "to", right_index =True).sort_index(ascending=True)})
         #self.line_loading.AC.update({"avg": (sum(self.line_loading.AC[year][0] for year in run_parameter.years)/len(run_parameter.years)).to_frame().merge(lines_overview[["from", "to"]], left_index = True, right_index = True).merge(bus_raw[["LAT","LON"]], left_on = "from", right_index =True).merge(bus_raw[["LAT","LON"]], left_on = "to", right_index =True).sort_index(ascending=True)})
-        self.line_loading.DC.update({"avg": (pd.concat([self.line_loading.DC[year][[0, "full_load_h"]] for year in run_parameter.years]).groupby(level=0).sum(numeric_only=True)/len(run_parameter.years)).merge(lines_DC_overview[["from", "to"]], left_index = True, right_index = True).merge(bus_raw[["LAT","LON"]], left_on = "from", right_index =True).merge(bus_raw[["LAT","LON"]], left_on = "to", right_index =True).sort_index(ascending=True)})
+        self.line_loading.DC.update({"avg": (pd.concat([self.line_loading.DC[year][[0, "full_load_h"]] for year in years]).groupby(level=0).sum(numeric_only=True)/len(years)).merge(lines_DC_overview[["from", "to"]], left_index = True, right_index = True).merge(bus_raw[["LAT","LON"]], left_on = "from", right_index =True).merge(bus_raw[["LAT","LON"]], left_on = "to", right_index =True).sort_index(ascending=True)})
         #self.line_loading.DC.update({"avg": (sum(self.line_loading.DC[year][0] for year in run_parameter.years)/len(run_parameter.years)).to_frame().merge(lines_DC_overview[["from", "to"]], left_index = True, right_index = True).merge(bus_raw[["LAT","LON"]], left_on = "from", right_index =True).merge(bus_raw[["LAT","LON"]], left_on = "to", right_index =True).sort_index(ascending=True)})
 
 
@@ -717,19 +717,19 @@ class kpi_data:
 
         # further calculations
         #overloaded lines -> > 70% load über die ganze periode, base case
-        if (run_parameter.subscen == 0) & (scen == 1):
+        if (run_parameter.sensitivity_scen == 0) & (scen == 1):
             try:
                 overloaded_AC = self.line_loading.AC["avg"][self.line_loading.AC["avg"]["full_load_h"] >= 0.7 * 504]["full_load_h"]
                 overloaded_AC = overloaded_AC * 3
-                overloaded_AC.to_csv(run_parameter.export_folder + str(1) +"/subscen" + str(run_parameter.subscen) + "/overloaded_lines_AC.csv")
+                overloaded_AC.to_csv(run_parameter.export_folder + str(1) +"/subscen" + str(run_parameter.sensitivity_scen) + "/overloaded_lines_AC.csv")
                 overloaded_DC = self.line_loading.DC["avg"][self.line_loading.DC["avg"]["full_load_h"] >= 0.7 * 504]["full_load_h"]
                 overloaded_DC = overloaded_DC * 3
-                overloaded_DC.to_csv(run_parameter.export_folder + str(1) + "/subscen" + str(run_parameter.subscen) + "/overloaded_lines_DC.csv")
+                overloaded_DC.to_csv(run_parameter.export_folder + str(1) + "/subscen" + str(run_parameter.sensitivity_scen) + "/overloaded_lines_DC.csv")
             except:pass
 
 
     def dataframe_creator(self,run_parameter, dict, bus_raw):
-        df = pd.DataFrame({year: dict[year].sum(axis=0) for year in run_parameter.years}).replace(0, np.nan).dropna(
+        df = pd.DataFrame({year: dict[year].sum(axis=0) for year in range(run_parameter.years)}).replace(0, np.nan).dropna(
             axis=0).merge(bus_raw[["LON", "LAT", "country", "bidding_zone"]], left_index=True, right_index=True)
         return df
     def read_in(self, y, string, int_convert = True):
@@ -820,7 +820,7 @@ class kpi_data:
         data_ei.index = data_ei.index.astype(int)
         data_ei_matched = data_ei.merge(lines_DC_overview[["EI"]], how="left", left_index=True, right_index=True)
         trade_to_bz = {}
-        for EI in self.run_parameter.EIs:
+        for EI in [0,1,2]:
             data_ei_individual = data_ei_matched[data_ei_matched["EI"] == EI]
             data_ei_from_bus = data_ei_individual.merge(lines_DC_overview[["from"]], how="left", left_index=True,right_index=True).set_index("from")
             data_ei_from_country = data_ei_from_bus.merge(bus_overview["country"], how="left", left_index=True,right_index=True).set_index("country")
@@ -829,7 +829,7 @@ class kpi_data:
         return trade_to_bz
 
     def change_column_to_int(self, item):
-        for y in self.run_parameter.years:
+        for y in range(self.run_parameter.years):
             item[y].columns = item[y].columns.astype(int)
         return item
     def prepare_results_files_bz(self, file, bus_raw):
@@ -882,19 +882,19 @@ class kpi_data:
         if yearly:
             CAP_BH = CAP_BH.T
             for i in CAP_BH:
-                index_file["Pmax"].iat[int(i)] = CAP_BH[i][y]
+                index_file["pmax"].iat[int(i)] = CAP_BH[i][y]
         elif isinstance(CAP_BH, pd.DataFrame):
             CAP_BH.columns = CAP_BH.columns.astype(int)
             for i in CAP_BH.index:
-                index_file["Pmax"].iat[int(i)] = CAP_BH.loc[i][0]
+                index_file["pmax"].iat[int(i)] = CAP_BH.loc[i][0]
         file_without_0 = line_data[line_data != 0].dropna(axis= 1, how="all").abs()
-        max_power = index_file[index_file.index.isin(line_data.columns)]["Pmax"]
+        max_power = index_file[index_file.index.isin(line_data.columns)]["pmax"]
         max_power_filtered = max_power[(max_power!=0.0)]
         relative = file_without_0.divide(max_power_filtered, axis=1)
         avg = relative.mean(axis=0).to_frame().fillna(0)
         avg["full_load_h"] = relative[relative > 0.70 - full_load_tolerance].count()
         # avg.index = avg.index.astype(int)
-        file_bus = avg.merge(index_file[["Pmax", "from", "to"]], how="left", left_index=True, right_index=True)
+        file_bus = avg.merge(index_file[["pmax", "from", "to"]], how="left", left_index=True, right_index=True)
         file_ready = file_bus.merge(bus_raw[["LAT", "LON"]], how="left", left_on="from", right_index=True)
         file_ready = file_ready.merge(bus_raw[["LAT", "LON"]], how="left", left_on="to", right_index=True)
         return file_ready

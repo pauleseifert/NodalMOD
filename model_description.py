@@ -4,7 +4,7 @@ from gurobipy import GRB
 import pandas as pd
 import numpy as np
 from helper_functions import ren_helper2, demand_helper2, create_encyclopedia, hoesch, distance_line, export
-from import_data_object import model_data, run_parameter
+from data_object import model_data, run_parameter
 from cyclefinding import cycles
 import pickle
 

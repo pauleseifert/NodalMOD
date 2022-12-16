@@ -2,48 +2,18 @@ import pandas as pd
 import os
 
 from printing_funct import plot_bar2_electrolyser, kpi_development, kpi_development2, radar_chart, plot_generation, plotly_maps_bubbles, plotly_maps_lines, plotly_maps_size_lines, plotly_maps_lines_hours, plot_bar_yearstack
-from helper_functions import Myobject
-from sys import platform
-from import_data_object import kpi_data
 
-run_parameter = Myobject()
-if platform == "linux" or platform == "linux2":
-    run_parameter.directory = "/work/seifert/"
-elif platform == "darwin":
-    run_parameter.directory = ""
-    run_parameter.case_name = "05_09_tyndp"
-    run_parameter.scen = [1,2,3,4]
-    run_parameter.subscen = 0
-    run_parameter.years = [0,1,2]
-    run_parameter.EIs = [0,1,2]
-    #run_parameter.number_flexlines= 17
-    run_parameter.export_folder = run_parameter.directory + "results/" + run_parameter.case_name + "/"
-    run_parameter.timesteps = 504
-    run_parameter.scaling_factor = 8760/run_parameter.timesteps
-    run_parameter.electrolyser = {
-        1: [],
-        2:pd.DataFrame({
-            "name": ["electrolyser_Bornholm", "electrolyser_NS1", "electrolyser_NS2"],
-            "bus": [521, 522, 523],
-            #"bidding zone": [44, 43, 43],
-            "position": ["Offshore", "Offshore", "Offshore"]}),
-        3:pd.DataFrame({
-            "name": ["electrolyser_Bornholm", "electrolyser_NS1", "electrolyser_NS2", "e1", "e2", "e3", "e4", "e5","e6", "e7", "e8", "e9", "e10", "e11", "e12", "e13", "e14"],
-            "bus": [521, 522, 523, 403, 212, 209, 170, 376, 357, 279, 103, 24, 357, 62, 467, 218, 513],
-            "position": ["Offshore", "Offshore", "Offshore", "Onshore","Onshore","Onshore","Onshore","Onshore","Onshore","Onshore","Onshore","Onshore","Onshore","Onshore","Onshore","Onshore","Onshore"]}),
-        4:pd.DataFrame({
-            "name": ["electrolyser_Bornholm", "electrolyser_NS1", "electrolyser_NS2", "e1", "e2", "e3", "e4", "e5", "e6", "e7", "e8", "e9", "e10", "e11", "e12", "e13", "e14"],
-            "bus": [521, 522, 523, 403, 212, 209, 170, 376, 357, 279, 103, 24, 357, 62, 467, 218, 513],
-            "position": ["Offshore", "Offshore", "Offshore", "Onshore","Onshore","Onshore","Onshore","Onshore","Onshore","Onshore","Onshore","Onshore","Onshore","Onshore","Onshore","Onshore","Onshore"]})
-        }
-kpis = {scen : kpi_data(run_parameter = run_parameter, scen= scen) for scen in run_parameter.scen}
+from data_object import kpi_data, run_parameter
+
+run_parameter= run_parameter(scenario_name = "Energy_island_scenario")
+kpis = {scen : kpi_data(run_parameter = run_parameter, scen= scen) for scen in [1]}
 
 #scenario spanning analysis
-scen_folder = run_parameter.export_folder +"maps/sensitivity" +str(run_parameter.subscen)+"/"
+scen_folder = run_parameter.export_folder +"maps/sensitivity" +str(run_parameter.sensitivity_scen)+"/"
 if not os.path.exists(scen_folder):
     os.makedirs(scen_folder)
 
-if run_parameter.subscen == 0:
+if run_parameter.sensitivity_scen == 0:
     #base scenario
     scen1 = pd.DataFrame({"BHEI": [0, 0, 0], "NSEI 1": [0, 0, 0], "NSEI 2": [0, 0, 0], "Landing points": [0, 0, 0]}, index=[2030, 2035, 2040])
     scen2 = pd.DataFrame({"BHEI": kpis[2].CAP_E.loc["electrolyser_Bornholm"][run_parameter.years].to_list(), "NSEI 1": kpis[2].CAP_E.loc["electrolyser_NS1"][run_parameter.years].to_list(), "NSEI 2": kpis[2].CAP_E.loc["electrolyser_NS2"][run_parameter.years].to_list(), "Landing points": [0, 0, 0]},index=[2030, 2035, 2040])
@@ -103,13 +73,13 @@ if run_parameter.subscen == 0:
     radar_chart(maps_folder=scen_folder, data=df, data2=df2)
 
 #Excel export
-kpi_folder = run_parameter.export_folder +"kpis/"+"sensitivity_scen"+str(run_parameter.subscen)
+kpi_folder = run_parameter.export_folder +"kpis/"+"sensitivity_scen"+str(run_parameter.sensitivity_scen)
 if not os.path.exists(kpi_folder):
     os.makedirs(kpi_folder)
 
 #CAP_BH
 def excel_export(run_parameter, kpis, type, col_sum = False, ts_reduction_backscaling = False):
-    with pd.ExcelWriter(run_parameter.export_folder + "/kpis/" +"sensitivity_scen"+str(run_parameter.subscen)+"/"+ type+'.xlsx') as writer:
+    with pd.ExcelWriter(run_parameter.export_folder + "/kpis/" +"sensitivity_scen"+str(run_parameter.sensitivity_scen)+"/"+ type+'.xlsx') as writer:
         for scen in run_parameter.scen:
             try:
                 entry = eval("kpis[" + str(scen) + "]." + type)
