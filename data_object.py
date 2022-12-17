@@ -20,7 +20,7 @@ class run_parameter:
     def __init__(self, scenario_name):
         #capture batch system specific parameters for running on a cluster computer
         if platform == "linux" or platform == "linux2":
-            self.directory = "/work/seifert/nodalmod/NodalMOD"       #patch on the cluster computer
+            self.directory = "/work/seifert/nodalmod/NodalMOD/"       #patch on the cluster computer
             self.case_name = sys.argv[1]                        #reading from the batch script
             self.years = int(sys.argv[2])
             self.timesteps = int(sys.argv[3])
