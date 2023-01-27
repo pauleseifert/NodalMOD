@@ -11,6 +11,7 @@ numba = "*"
 requests = "*"
 networkx = "*"
 pyogrio = "*"
+openpyxl = "*"
 
 [dev-packages]
 

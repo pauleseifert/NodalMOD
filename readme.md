@@ -17,6 +17,7 @@ Questions, suggestions, or own contributions are highly appreciated!
 0.2 Water reservoirs from http://data.europa.eu/89h/52b00441-d3e0-44e0-8281-fda86a63546d
 0.3 Grid dataset from zenodo : TODO
 0.4 Historical water timeseries: TODO
+0.5 Renewable Power plants (renewable_power_plants_EU.csv) : https://doi.org/10.25832/renewable_power_plants/2020-08-25 
 1. To start the workflow, edit the run parameters in the *data_object.py* file. You can define the years and time steps the model should run.
 2. Create a .mps model for gurobi by running the *model_description.py* file
 3. Solve the model by running the *model_solving.py* file

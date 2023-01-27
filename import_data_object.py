@@ -79,7 +79,7 @@ class model_data:
             lines_raw = pd.read_csv(run_parameter.import_folder + "grid_nordelNew_branch.csv", sep=";")
             dam_ts = pd.read_csv(run_parameter.import_folder + "/timeseries/hydro_dam_ts.csv", low_memory=False)
             ror_ts = pd.read_csv(run_parameter.import_folder + "/timeseries/hydro_ror_ts.csv", low_memory=False)
-            open_hydro_database = pd.read_csv(run_parameter.data_folder + "/jrc-hydro-power-plant-database.csv")
+            open_hydro_database = pd.read_csv(run_parameter.import_folder + "jrc-hydro-power-plant-database.csv")
 
             # cleaning the nodes dataframe
 
@@ -344,7 +344,7 @@ class model_data:
             return renewables_full, share_solar, share_wind
 
 
-        res_open_data = pd.read_csv(run_parameter.data_folder + "renewable_power_plants_EU.csv", low_memory=False)
+        res_open_data = pd.read_csv(run_parameter.import_folder+ "renewable_power_plants_EU.csv", low_memory=False)
         res_od_filtered = res_open_data[res_open_data["country"].isin(run_parameter.country_selection)]
         res_od_filtered = res_od_filtered.rename( columns={"electrical_capacity": "P_inst", "technology": "type", "lat": "LAT", "lon": "LON"})
         res_od_filtered = res_od_filtered[["country", "type", "P_inst", "LAT", "LON"]]
