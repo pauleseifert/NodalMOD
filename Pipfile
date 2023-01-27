@@ -10,6 +10,7 @@ plotly = "*"
 numba = "*"
 requests = "*"
 networkx = "*"
+pyogrio = "*"
 
 [dev-packages]
 

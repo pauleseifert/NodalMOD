@@ -499,7 +499,7 @@ class model_data:
         dispatchable_generators = {year:get_conventional_yearly(tyndp_values=tyndp_installed_capacity, df_2020_capacity_bz = conventional_fossil, df_2020_capacity_bz_grouped = conventional_fossil_grouped, conventional_h20= conventional_h20, year = year, CO2_price = self.CO2_price) for year in run_parameter.years}
         return dispatchable_generators
 
-    def tyndp_values(self, run_parameter, filename_capacity = "220310_Updated_Electricity_Modelling_Results.xlsx", filename_demand ="220310_Updated_Electricity_Modelling_Results.xlsx", scenario = "Global Ambition"):
+    def tyndp_values(self, run_parameter, filename_capacity = "Updated_Electricity_Modelling_Results.xlsx", filename_demand ="Updated_Electricity_Modelling_Results.xlsx", scenario = "Global Ambition"):
         df_installed_capacity = pd.read_excel(run_parameter.data_folder+ "/TYNDP/"+filename_capacity, sheet_name="Capacity & Dispatch")
         df_demand = pd.read_excel(run_parameter.data_folder+ "/TYNDP/"+filename_demand, sheet_name="Demand")
         ## Supply
