@@ -12,7 +12,7 @@ starttime = timeit.default_timer()
 
 #load model parameters
 run_parameter= run_parameter(scenario_name = "Energy_island_scenario")
-run_parameter.create_scenarios()
+run_parameter.create_scenarios(scen=run_parameter.scen, sensitivity_scen=run_parameter.sensitivity_scen)
 
 data = model_data(create_res = True ,reduced_ts = True, export_files= True, run_parameter = run_parameter)
 

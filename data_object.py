@@ -32,7 +32,7 @@ class run_parameter:
             self.case_name = scenario_name
             self.years = 3
             self.timesteps = 504
-            self.scen = 2
+            self.scen = 1
             self.sensitivity_scen = 0
         self.solving = False
         self.reduced_TS = True
@@ -45,20 +45,25 @@ class run_parameter:
         self.hours = 504  # 21 representative days
         self.scaling_factor = 8760 / self.hours
 
-    def create_scenarios(self):
-        match self.scen:
+    def create_scenarios(self, scen, sensitivity_scen):
+        self.scen = scen
+        self.sensitivity_scen = sensitivity_scen
+        match scen:
             case 1:
+                self.scen_name = "BAU"
                 self.electrolyser = []
-                print("BASE case")
+                print("BAU case")
             case 2:
+                self.scen_name = "OFFSH"
                 self.electrolyser = pd.DataFrame({
-                    "name": ["electrolyser Bornholm", "electrolyser_NS1", "electrolyser_NS2"],
+                    "name": ["electrolyser_Bornholm", "electrolyser_NS1", "electrolyser_NS2"],
                     "bus": [521, 522, 523],
                     "cost": [645000, 645000, 645000]})
                 print("EI case")
             case 3:
+                self.scen_name = "COMBI"
                 self.electrolyser = pd.DataFrame({
-                    "name": ["electrolyser Bornholm", "electrolyser_NS1", "electrolyser_NS2", "e1", "e2", "e3", "e4", "e5",
+                    "name": ["electrolyser_Bornholm", "electrolyser_NS1", "electrolyser_NS2", "e1", "e2", "e3", "e4", "e5",
                              "e6", "e7", "e8", "e9", "e10", "e11", "e12", "e13", "e14"],
                     "bus": [521, 522, 523, 403, 212, 209, 170, 376, 357, 279, 103, 24, 357, 62, 467, 218, 513],
                     "cost": [645000, 645000, 645000, 450000, 450000, 450000, 450000, 450000, 450000, 450000, 450000, 450000,
@@ -66,37 +71,38 @@ class run_parameter:
                 })
                 print("COMBI case")
             case 4:
+                self.scen_name = "STAKE"
                 self.electrolyser = pd.DataFrame({
-                    "name": ["electrolyser Bornholm", "electrolyser_NS1", "electrolyser_NS2", "e1", "e2", "e3", "e4", "e5",
+                    "name": ["electrolyser_Bornholm", "electrolyser_NS1", "electrolyser_NS2", "e1", "e2", "e3", "e4", "e5",
                              "e6", "e7", "e8", "e9", "e10", "e11", "e12", "e13", "e14"],
                     "bus": [521, 522, 523, 403, 212, 209, 170, 376, 357, 279, 103, 24, 357, 62, 467, 218, 513],
                     "cost": [645000, 645000, 645000, 450000, 450000, 450000, 450000, 450000, 450000, 450000, 450000, 450000,
                              450000, 450000, 450000, 450000, 450000]})
                 print("Stakeholder case")
 
-        match self.sensitivity_scen:
+        match sensitivity_scen:
             case 0:
-                print("Base scenario sensitivity")
+                self.sensitivity_scen_name = "Base scenario"
                 self.CO2_price = [80, 120, 160]
                 self.R_H = [108, 108, 108]
                 self.grid_extension = False
             case 1:
-                print("Low H2 price subscen")
+                self.sensitivity_scen_name = "Low H2 price"
                 self.CO2_price = [80, 120, 160]
                 self.R_H = [81, 81, 81]
                 self.grid_extension = False
             case 2:
-                print("High H2 price subscen")
+                self.sensitivity_scen_name = "High H2 price"
                 self.CO2_price = [80, 120, 160]
                 self.R_H = [135, 135, 135]
                 self.grid_extension = False
             case 3:
-                print("High CO2 price subscen")
+                self.sensitivity_scen_name = "High CO2 price"
                 self.CO2_price = [130, 250, 480]
                 self.R_H = [108, 108, 108]
                 self.grid_extension = False
             case 4:
-                print("Grid extension")
+                self.sensitivity_scen_name = "Grid extension"
                 self.CO2_price = [80, 120, 160]
                 self.R_H = [108, 108, 108]
                 self.grid_extension = True
@@ -505,7 +511,7 @@ class model_data:
         # base scenario, subscenario 3
         try:
             overloaded_AC_lines = pd.read_csv("results/"+case_name+"/1/subscen0/overloaded_lines_AC.csv", index_col=0)["full_load_h"].to_dict()
-            overloaded_DC_lines = pd.read_csv("results/" + case_name + "/1/subscen0/overloaded_lines_DC.csv", index_col=0)["full_load_h"].to_dict()
+            overloaded_DC_lines = pd.read_csv("results/" + case_name + "/1/subscen0/overloaded_lines_DC.csv", index_col=0)#["full_load_h"].to_dict()
         except: sys.exit("need to run scenario 1 first!")
         #overloaded_AC_lines = {51: 1121, 249: 1313, 315: 1342, 363: 1354, 397: 1341, 408: 1114, 488: 1319, 489: 1345, 494: 1473, 497: 1204, 530: 1182, 550: 1368, 563: 1175, 600: 1330, 624: 1503, 631: 1273, 646: 1393, 679: 1075, 782: 1165}
         #overloaded_DC_lines ={0: 1277, 1: 1188, 2: 1137, 3: 1466, 4: 1402, 6: 1113, 7: 1360, 8: 1285, 9: 1318, 10: 1320, 11: 1483, 12: 1401, 13: 1195, 14: 1461, 15: 1398, 16: 1183, 17: 1506, 18: 1397, 21: 1415, 22: 1250, 23: 1136, 24: 1188, 25: 1377, 26: 1330, 31: 1201, 35: 1369, 37: 1105, 38: 1316, 41: 1314, 42: 1343}
@@ -515,11 +521,11 @@ class model_data:
             case "AC":
                 for key in self.ac_lines.index:
                     if key in overloaded_AC_lines.keys():
-                        self.ac_lines.loc[key,"max"] = self.ac_lines.loc[key,"max"]*(1+0.2*overloaded_AC_lines[key]/(self.number_years*self.timesteps_reduced_ts))
+                        self.ac_lines.loc[key,"max"] = self.ac_lines.loc[key,"max"]*(1+0.2*overloaded_AC_lines[key]/(len(self.share_wind.keys())*self.timesteps_reduced_ts))
             case "DC":
                 for key  in self.dc_lines.index:
                     if key in overloaded_DC_lines.keys():
-                        self.dc_lines.loc[key, "max"] = self.dc_lines.loc[key, "max"] * (1+0.2 * overloaded_DC_lines[key]/(self.number_years * self.timesteps_reduced_ts))
+                        self.dc_lines.loc[key, "max"] = self.dc_lines.loc[key, "max"] * (1+0.2 * overloaded_DC_lines[key]/(len(self.share_wind.keys()) * self.timesteps_reduced_ts))
     def add_future_windcluster(self, location):
         windfarms = pd.read_csv(location+"additional_windfarm_cluster.csv",  encoding="UTF-8").dropna(axis=1)
         windfarms["Market Zone"] = windfarms["Market Zone"].replace("DELU", "DE").replace("GB", "UK")
@@ -610,10 +616,13 @@ class model_data:
 
 
 class kpi_data:
-    def __init__(self, run_parameter, scen):
+    def __init__(self, run_parameter, scen, sensitivity_scen):
+        run_parameter.create_scenarios(scen=scen, sensitivity_scen=sensitivity_scen)
         self.run_parameter = run_parameter
+        self.scen_name = self.run_parameter.scen_name
+        self.sensitivity_scen_name = self.run_parameter.sensitivity_scen_name
         years = range(self.run_parameter.years)
-        read_folder = run_parameter.read_folder = run_parameter.directory + "results/" + run_parameter.case_name + "/" + str(scen) + "/subscen" +str(run_parameter.sensitivity_scen) + "/"
+        read_folder = run_parameter.read_folder = run_parameter.directory + "results/" + run_parameter.case_name + "/" + str(scen) + "/subscen" +str(sensitivity_scen) + "/"
         self.bus = pd.read_csv(read_folder + "busses.csv", index_col=0)
 
         #create empty objects
@@ -652,7 +661,7 @@ class kpi_data:
         #encyc_powerplants_bus = create_encyclopedia(powerplants_raw[0]["bus"])
         #encyc_storage_bus = create_encyclopedia(storage["bus"])
         if scen!= 1:
-            self.CAP_E =self.read_in(y = "", string ="CAP_E.csv").transpose().merge(run_parameter.electrolyser[scen][["name", "bus"]], left_index=True, right_index=True).merge(bus_raw[["LON", "LAT"]], left_on ="bus", right_index=True).set_index("name")
+            self.CAP_E =self.read_in(y = "", string ="CAP_E.csv").transpose().merge(run_parameter.electrolyser[["name", "bus"]], left_index=True, right_index=True).merge(bus_raw[["LON", "LAT"]], left_on ="bus", right_index=True).set_index("name")
 
         self.F_AC = {y: self.read_in(y = y, string = "_F_AC.csv") for y in years}
         self.timesteps = self.F_AC[0].shape[0]
@@ -667,7 +676,7 @@ class kpi_data:
         self.C_S = {y: self.read_in(y = y, string = "_C_S.csv") for y in years}
         self.P_loss_load = {y: self.read_in(y = y, string = "_p_load_lost.csv") for y in years}
         if scen != 1:
-            self.P_H = {y: self.read_in(y = y, string = "_P_H.csv").transpose().merge(run_parameter.electrolyser[scen]["name"], left_index=True, right_index=True).set_index("name").T for y in years}
+            self.P_H = {y: self.read_in(y = y, string = "_P_H.csv").transpose().merge(run_parameter.electrolyser["name"], left_index=True, right_index=True).set_index("name").T for y in years}
 
 
         #calculations
@@ -714,19 +723,21 @@ class kpi_data:
         self.curtailment.location = self.dataframe_creator(run_parameter = run_parameter, dict = self.curtailment.raw, bus_raw = bus_raw)
 
 
-
         # further calculations
         #overloaded lines -> > 70% load über die ganze periode, base case
         if (run_parameter.sensitivity_scen == 0) & (scen == 1):
             try:
                 overloaded_AC = self.line_loading.AC["avg"][self.line_loading.AC["avg"]["full_load_h"] >= 0.7 * 504]["full_load_h"]
                 overloaded_AC = overloaded_AC * 3
-                overloaded_AC.to_csv(run_parameter.export_folder + str(1) +"/subscen" + str(run_parameter.sensitivity_scen) + "/overloaded_lines_AC.csv")
+                overloaded_AC.to_csv(run_parameter.export_folder + "/overloaded_lines_AC.csv")
                 overloaded_DC = self.line_loading.DC["avg"][self.line_loading.DC["avg"]["full_load_h"] >= 0.7 * 504]["full_load_h"]
                 overloaded_DC = overloaded_DC * 3
-                overloaded_DC.to_csv(run_parameter.export_folder + str(1) + "/subscen" + str(run_parameter.sensitivity_scen) + "/overloaded_lines_DC.csv")
+                overloaded_DC.to_csv(run_parameter.export_folder  + "/overloaded_lines_DC.csv")
             except:pass
-
+    def export(self):
+        export_kpis_folder = "results/" + run_parameter.case_name + "/kpis"
+        if not os.path.exists(export_kpis_folder):
+            os.makedirs(export_kpis_folder)
 
     def dataframe_creator(self,run_parameter, dict, bus_raw):
         df = pd.DataFrame({year: dict[year].sum(axis=0) for year in range(run_parameter.years)}).replace(0, np.nan).dropna(

@@ -3,9 +3,10 @@ import numpy as np
 import plotly.graph_objects as go
 import plotly.io as pio
 from plotly.subplots import make_subplots
-#pio.kaleido.scope.mathjax = None
+pio.kaleido.scope.mathjax = None
 pio.renderers.default = "browser"
 from colour import Color
+from helper_functions import year_wise_normalisation
 
 from dataclasses import dataclass
 
@@ -662,61 +663,58 @@ def kpi_development2(data, title, folder):
     fig.update_yaxes(title_text="Electrolyser capacity in GW", range = [50, 130], secondary_y=True)
     fig.write_image(folder+ "KPI_development.pdf", width=2000, height=800)
 
-def radar_chart(maps_folder, data, data2, title=""):
+def radar_chart(maps_folder,kpis, title=""):
+    list_of_years = range(kpis[0].run_parameter.years)
+    curtailment = year_wise_normalisation(pd.DataFrame({kpis[scen].sensitivity_scen_name: [kpis[scen].curtailment.raw[year].sum().sum() for year in list_of_years] for scen in kpis.keys()},index=[2030, 2035, 2040]))
+    electrolyser_capacity = year_wise_normalisation(pd.DataFrame({kpis[scen].sensitivity_scen_name: [kpis[scen].CAP_E[year].sum().sum() for year in list_of_years] for scen in kpis.keys()},index=[2030, 2035, 2040]))
+    hydrogen = year_wise_normalisation(pd.DataFrame({kpis[scen].sensitivity_scen_name: [kpis[scen].P_H[year].sum().sum() for year in list_of_years] for scen in kpis.keys()},index=[2030, 2035, 2040]))
+    conventional = year_wise_normalisation(pd.DataFrame({kpis[scen].sensitivity_scen_name: [kpis[scen].generation_temporal[year].ts_conventional().sum() for year in list_of_years] for scen in kpis.keys()},index=[2030, 2035, 2040]))
+    data = pd.concat([curtailment, electrolyser_capacity, hydrogen, conventional], keys=["curtailment", "electrolyser capacity", "hydrogen production", "conventional usage"])
+
     fig = go.Figure()
     #data2 = data.reindex(columns=data.columns.get_level_values(1).unique(), level=1)
-    theta = list(data.columns.get_level_values(0).unique())
+    theta = list(data.index.get_level_values(0).unique())
     theta.append("curtailment")
-    for case in data2.columns.get_level_values(1).unique():
+    year = 2040
+    for type in data.columns.get_level_values(0).unique():
         fig.add_trace(go.Scatterpolar(
-            r=[data2[i][case][2040] for i in data2.columns.get_level_values(0).unique()]+[data2["curtailment"][case][2040]],
+            r=[data[type][kpi][year] for kpi in data.index.get_level_values(0).unique()]+ [data[type][data.index.get_level_values(0).unique()[0]][year]],
             theta=theta,
             #fill='toself',
-            text = [data[i][case][2040] for i in data.columns.get_level_values(0).unique()],
-            name=case
+            text = [data[type][kpi][year] for kpi in data.index.get_level_values(0).unique()],
+            name=type,
         ))
-    # fig.add_trace(go.Scatterpolar(
-    #     r=[data2[i]["Offshore"][2040] for i in data2.columns.get_level_values(0).unique()]+[data2["curtailment"]["Offshore"][2040]],
-    #     theta=theta,
-    #     #fill='toself',
-    #     text=[data[i]["Offshore"][2040] for i in data.columns.get_level_values(0).unique()],
-    #     name='Offshore'
-    # ))
-    # fig.add_trace(go.Scatterpolar(
-    #     r=[data2[i]["Offshore&Onshore"][2040] for i in data2.columns.get_level_values(0).unique()]+[data2["curtailment"]["Offshore&Onshore"][2040]],
-    #     theta=theta,
-    #     #fill='toself',
-    #     text=[data[i]["Offshore&Onshore"][2040] for i in data.columns.get_level_values(0).unique()],
-    #     name='Offshore&Onshore'
-    # ))
-    # fig.add_trace(go.Scatterpolar(
-    #     r=[data2[i]["Stakeholder"][2040] for i in data2.columns.get_level_values(0).unique()]+[data2["curtailment"]["Stakeholder"][2040]],
-    #     theta=theta,
-    #     text=[data[i]["Stakeholder"][2040] for i in data.columns.get_level_values(0).unique()],
-    #     #fill='toself',
-    #     name='Stakeholder'
-    # ))
     fig.update_traces(
         #mode="lines+markers+text",
         mode="lines+markers",
+        line = dict(
+            width = 6
+        )
     )
     fig.update_layout(
-        font=dict(size=30),
+    #coloraxis= "rgba(1,1,1,1)",
+    font=dict(size=30),
         title=title,
         polar=dict(
             radialaxis=dict(
-                visible=False,
-                range=[0, 1.0],
-
+                visible=True,
+                showticklabels = False,
+    #range=[0, 1.0],
+                color="black",
+                #linecolor = "black",
+                gridwidth = 0.1,
+                linewidth = 0,
+                gridcolor = 'rgba(1,1,1,0.2)'
+                #type ="log"
             ),
             bgcolor='rgba(0,0,0,0)'
             ),
         legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=-0.2,
-            xanchor="center",
-            x=0.5,
+            #orientation="h",
+            #yanchor="top",
+            #y=0.5,
+            #xanchor="center",
+            #x=1,
             ),
         paper_bgcolor='rgba(0,0,0,0)',
         #bgcolor='rgba(0,0,0,0)',

@@ -71,6 +71,11 @@ def merge_timeseries_supply(supply, timeseries):
     bus = pd.DataFrame(bus_np, columns=supply["bus"])
     return bus
 
+def year_wise_normalisation(df):
+    for year in df.index:
+        # df.loc[year] = (df.loc[year]-min(df.loc[year]))/(max(df.loc[year])-min(df.loc[year]))
+        df.loc[year] = df.loc[year] / max(df.loc[year])
+    return df
 
 
 def read_write_excel_to_csv(import_path, export_path):
