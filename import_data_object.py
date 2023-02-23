@@ -258,6 +258,7 @@ class model_data:
         filtered_lines = merged_lines.groupby(["bidding_zone_x", "bidding_zone_y"]).sum()[["pmax", "max"]].reset_index()
         single_entries = self.find_duplicate_lines(filtered_lines, ["bidding_zone_x", "bidding_zone_y"], False)
         filtered = single_entries.query('bidding_zone_x != bidding_zone_y')
+        return filtered
     def find_duplicate_lines(self, lines, columns=["from", "to"], fix_reactance=True):
         #get rid of multiple lines in the same columns
         grouped_lines = lines.groupby(columns).size()
