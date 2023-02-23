@@ -5,6 +5,7 @@ import pandas as pd
 
 pd.options.mode.chained_assignment = None
 from helper_functions import Myobject, match_nearest_node, merge_timeseries_supply, fix_multiple_parallel_lines
+from printing_funct import plotly_empty_map
 import pickle
 import requests
 import json
@@ -120,7 +121,8 @@ class model_data:
             lines = self.find_duplicate_lines(lines)
             self.ac_lines = lines
             #self.dc_lines = lines_DC
-
+            #plotly_empty_map(nodes=self.nodes, ac_lines=self.ac_lines, dc_lines=pd.DataFrame(), folder=run_parameter.import_folder)
+            self.ATC_capacities = self.interzonal_lines(lines=self.ac_lines)
 
             # load TYNDP values
             self.tyndp_values(run_parameter=run_parameter)
@@ -251,27 +253,29 @@ class model_data:
             self.extend_overloaded_lines(type="AC", case_name = run_parameter.case_name)
             self.extend_overloaded_lines(type="DC", case_name = run_parameter.case_name)
 
-
-    def find_duplicate_lines(self, lines):
+    def interzonal_lines(self, lines):
+        merged_lines = lines.merge(self.nodes["bidding_zone"], left_on="from", right_index=True).merge(self.nodes["bidding_zone"], left_on="to", right_index=True)
+        filtered_lines = merged_lines.groupby(["bidding_zone_x", "bidding_zone_y"]).sum()[["pmax", "max"]].reset_index()
+        single_entries = self.find_duplicate_lines(filtered_lines, ["bidding_zone_x", "bidding_zone_y"], False)
+        filtered = single_entries.query('bidding_zone_x != bidding_zone_y')
+    def find_duplicate_lines(self, lines, columns=["from", "to"], fix_reactance=True):
         #get rid of multiple lines in the same columns
-        grouped_lines = lines.groupby(["from", "to"]).size()
+        grouped_lines = lines.groupby(columns).size()
         grouped_lines = grouped_lines[grouped_lines>1]
         for index, count in grouped_lines.items():
-                duplicate_index = lines[(lines["from"] == index[0]) &  (lines["to"] == index[1])].index
-                lines = fix_multiple_parallel_lines(duplicate_index, lines)
+                duplicate_index = lines[(lines[columns[0]] == index[0]) &  (lines[columns[1]] == index[1])].index
+                lines = fix_multiple_parallel_lines(duplicate_index, columns, lines, fix_reactance)
         single_lines_same_order = lines.sort_index().reset_index(drop=True)
 
         #get rid of multiple lines in the other columns
-
-        grouped_lines_oo = pd.concat([single_lines_same_order, single_lines_same_order.rename(columns= {"to":"from", "from":"to"})]).groupby(["from", "to"]).size()
+        grouped_lines_oo = pd.concat([single_lines_same_order, single_lines_same_order.rename(columns= {columns[1]:columns[0], columns[0]:columns[1]})]).groupby([columns[0], columns[1]]).size()
         grouped_lines_oo = grouped_lines_oo[grouped_lines_oo>1]
 
         for index,count in grouped_lines_oo.items():
-            duplicate_index = single_lines_same_order[((single_lines_same_order["from"] == index[0]) & (single_lines_same_order["to"] == index[1])) | ((single_lines_same_order["to"] == index[0]) & (single_lines_same_order["from"] == index[1]))].index
-            single_lines_same_order = fix_multiple_parallel_lines(duplicate_index, single_lines_same_order)
+            duplicate_index = single_lines_same_order[((single_lines_same_order[columns[0]] == index[0]) & (single_lines_same_order[columns[1]] == index[1])) | ((single_lines_same_order[columns[1]] == index[0]) & (single_lines_same_order[columns[0]] == index[1]))].index
+            single_lines_same_order = fix_multiple_parallel_lines(duplicate_index, columns, single_lines_same_order, fix_reactance)
             #grouped_lines_oo.drop([index[::-1]], inplace=True)
         single_lines_oo = single_lines_same_order.sort_index().reset_index(drop=True)
-
         return single_lines_oo
 
 

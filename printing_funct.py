@@ -29,6 +29,57 @@ from plotly.subplots import make_subplots
 # full_ts = pd.read_csv(location+"renewables_for_poncelet.csv", index_col=0)
 # poncelet_ts = pd.read_csv(location+"poncelet_ts.csv", index_col=0)
 
+def plotly_empty_map(ac_lines, dc_lines, nodes, folder):
+    df = pd.concat([ac_lines, ac_lines], axis=0, ignore_index=True).reset_index(drop=True)
+    df_match = df.merge(nodes[["LAT", "LON"]], left_on="from", right_index=True)
+    df_match = df_match.merge(nodes[["LAT", "LON"]], left_on="to", right_index=True)
+    lons = np.empty(3 * len(df))
+    lons[::3] = df_match["LON_x"]
+    lons[1::3] = df_match["LON_y"]
+    lons[2::3] = None
+    lats = np.empty(3 * len(df))
+    lats[::3] = df_match["LAT_x"]
+    lats[1::3] = df_match["LAT_y"]
+    lats[2::3] = None
+
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scattermapbox(
+            lon=lons,
+            lat=lats,
+            mode='lines',
+            line=dict(
+                width=3,
+                ),
+            opacity=1,
+            name="Line"
+        )
+    )
+    fig.add_trace(
+        go.Scattermapbox(
+        lon=nodes['LON'],
+        lat=nodes['LAT'],
+        hoverinfo='text',
+        text=nodes.index,
+        mode='markers',
+        marker=dict(
+            size=2,
+            color='rgb(0, 0, 0)'
+            ),
+        name = "Bus"
+        ))
+
+    fig = plotly_map(fig, 4.7)
+    fig.update_layout(
+        font=dict(size=30,
+                  #family = "Serif"
+                  ),
+        legend_title_text='Grid element',
+    )
+    #fig.show()
+    fig.write_html(folder+ "line_loading_colorless.html")
+    fig.write_image(folder + "line_loading_colorless.pdf", width=2000, height=1600)
+
 def plotly_maps_lines_colorless(P_flow, P_flow_DC,bus, scen, maps_folder):
     P_flow=P_flow.reset_index()
     P_flow_DC = P_flow_DC.reset_index()
@@ -169,7 +220,7 @@ def plotly_maps_bubbles(df, scen, maps_folder, name, year, unit, size_scale, tit
     #fig.show()
     #fig.write_html(maps_folder + str(scen) + "_"+name+".html")
     fig.write_image(maps_folder + "scen_"+str(scen) +"_year_"+str(year) + "_"+name+".pdf", width=2000, height=1600)
-def plotly_maps_lines(P_flow, P_flow_DC,bus, scen, maps_folder):
+def plotly_maps_lines(P_flow, P_flow_DC, bus, scen, maps_folder):
     colors = list(Color("green").range_to(Color("red"), 8))
     limits = [(0, 10), (10, 20), (20, 30), (30, 40), (40, 50), (50, 60), (60, 70), (70, 75)]
     text = ["0%-10%", "10%-20%", "20%-30%","30%-40%", "40%-50%", "50%-60%", "60%-70%", "70%-75%"]

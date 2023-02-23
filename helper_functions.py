@@ -530,13 +530,16 @@ def fix_parallel_lines(entry, duplicate_entry, lines):
     new_lines = pd.concat([lines, new_row])
     return new_lines.reset_index(drop=True)
 
-def fix_multiple_parallel_lines(entries, lines):
+def fix_multiple_parallel_lines(entries, columns,lines, fix_reactance):
     if entries.empty:
         return lines
     else:
         relevant_lines = lines.loc[entries]
-        new_x = sum(relevant_lines["max"]*relevant_lines["x"])/sum(relevant_lines["max"])
-        new_row= pd.DataFrame({"pmax": sum(relevant_lines["pmax"]), "x":new_x, "from": relevant_lines.iloc[0]["from"].astype(int), "to":relevant_lines.iloc[0]["to"].astype(int), "max":sum(relevant_lines["max"])}, index=[relevant_lines.iloc[0].name])
+        if fix_reactance:
+            new_x = sum(relevant_lines["max"]*relevant_lines["x"])/sum(relevant_lines["max"])
+            new_row= pd.DataFrame({"pmax": sum(relevant_lines["pmax"]), "x":new_x, columns[0]: relevant_lines.iloc[0][columns[0]].astype(int), columns[1]:relevant_lines.iloc[0][columns[1]].astype(int), "max":sum(relevant_lines["max"])}, index=[relevant_lines.iloc[0].name])
+        else:
+            new_row= pd.DataFrame({"pmax": sum(relevant_lines["pmax"]), columns[0]: relevant_lines.iloc[0][columns[0]], columns[1]:relevant_lines.iloc[0][columns[1]], "max":sum(relevant_lines["max"])}, index=[relevant_lines.iloc[0].name])
         lines.drop(entries, inplace=True)
         new_lines = pd.concat([lines, new_row])#.sort_index()
         return new_lines

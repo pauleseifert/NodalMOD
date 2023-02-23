@@ -12,6 +12,8 @@ requests = "*"
 networkx = "*"
 pyogrio = "*"
 openpyxl = "*"
+kaleido = "*"
+osmnx = "*"
 
 [dev-packages]
 

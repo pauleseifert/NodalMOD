@@ -100,6 +100,7 @@ res_curtailment = model.addVars(Y, T, R, lb=0.0, ub = GRB.INFINITY, name="res_cu
 #cap_BH = model.addVars(Y, I, lb=0.0, ub = GRB.INFINITY, name = "cap_BH")
 #F_AC = model.addVars(Y, T, L, lb =-GRB.INFINITY, ub=GRB.INFINITY, name="F_AC")
 #F_DC = model.addVars(Y, T, LDC, lb =-GRB.INFINITY,ub=GRB.INFINITY, name = "F_DC")
+ATC = model.addVars(Y, T, LDC, lb =-GRB.INFINITY,ub=GRB.INFINITY, name = "ATC")
 p_load_lost = model.addVars(Y, T, N, lb=0.0, ub = GRB.INFINITY, name = "p_load_lost")
 # storage variables
 P_S = model.addVars(Y, T, S, lb=0.0, ub = GRB.INFINITY, vtype=GRB.CONTINUOUS, name="P_S")  # power gen. by storage (depletion)
@@ -142,6 +143,12 @@ model.addConstrs((
     + gp.quicksum(P_S[y, t, s] - C_S[y, t, s] for s in encyc_storage_in_zone[z])
     == gp.quicksum(demand_dict[y][n][t] - p_load_lost[y, t, n] for n in encyc_nodes_in_zones[z])
     for z in Z for t in T for y in Y), name ="Injection_equality")
+
+#70% of the physical capacity
+#take the prices and the nodal quantities and calculate
+#with ptdf -> calculate and not resolve it!
+# but with ptdfs you need to fix the DC net injections beforehand
+# PROBLEM: If the first stage solutaion is not restricted, the second stage - if an optimisation problem- finds more profitable trades -> not only redispatch to make it feasible
 try:
     model.write(run_parameter.export_model_formulation)
     print("The time difference after model writing:", timeit.default_timer() - starttime)
