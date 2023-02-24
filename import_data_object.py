@@ -28,8 +28,8 @@ class run_parameter:
         elif (platform == "darwin") or (platform == "win32"):
             self.directory = ""
             self.case_name = scenario_name
-            self.years = [2030]
-            self.timesteps = 4000
+            self.years = [2030] #possible years are 2030,2035,2040 or a list of combination of years
+            self.timesteps = 24
             self.scen = 1
             self.sensitivity_scen = 0
         self.solving = False
@@ -61,7 +61,7 @@ class run_parameter:
                 self.grid_extension = False
 
         self.TRM = 0.7
-        self.country_selection = ["NO", "SE", "FI", "DK"]
+        self.country_selection = ["NO", "SE"]
         bidding_zones = ['AL', 'AT', 'BA', 'BE', 'BG', 'CH', 'CZ', 'DE', 'DK1', 'DK2', 'ES', 'FI', 'FR', 'GR', 'HR','HU', 'IE', 'IT1', 'IT2', 'IT3', 'IT4', 'IT5', 'ME', 'MK', 'NL', 'NO1', 'NO5', 'NO3', 'NO4','NO2', 'PL', 'PT', 'RO', 'RS', 'SE1', 'SE2', 'SE3', 'SE4', 'SI', 'SK', 'UK', 'CBN', 'TYNDP','NSEH', 'BHEH']
         self.bidding_zones_overview = pd.DataFrame({"bidding zones": ['AL', 'AT', 'BA', 'BE', 'BG', 'CH', 'CZ', 'DE', 'DK1','DK2', 'ES', 'FI', 'FR', 'GR', 'HR', 'HU', 'IE', 'IT1','IT2', 'IT3', 'IT4', 'IT5', 'ME', 'MK', 'NL', 'NO1','NO5', 'NO3', 'NO4', 'NO2', 'PL', 'PT', 'RO', 'RS','SE1', 'SE2', 'SE3', 'SE4', 'SI', 'SK', 'UK', 'CBN','TYNDP', 'NSEH', 'BHEH'],
                                                "zone_number": [i for i, v in enumerate(bidding_zones)],
@@ -77,10 +77,13 @@ class model_data:
             generators_raw = pd.read_csv(run_parameter.import_folder + "grid_nordelNew_gen.csv", sep=";")
             coordinates= pd.read_csv(run_parameter.import_folder + "nordel_coordinates.csv", index_col=0)
             load_entsoe_ts = pd.read_csv(run_parameter.import_folder+ "entsoe_demand_2019.csv", index_col=0).reset_index(drop=True)
+            load_entsoe_ts.columns = load_entsoe_ts.columns.str.replace("_", "")
             lines_raw = pd.read_csv(run_parameter.import_folder + "grid_nordelNew_branch.csv", sep=";")
             dam_ts = pd.read_csv(run_parameter.import_folder + "/timeseries/hydro_dam_ts.csv", low_memory=False)
             ror_ts = pd.read_csv(run_parameter.import_folder + "/timeseries/hydro_ror_ts.csv", low_memory=False)
             open_hydro_database = pd.read_csv(run_parameter.import_folder + "jrc-hydro-power-plant-database.csv")
+            # load TYNDP values
+            self.import_tyndp_values(run_parameter=run_parameter, interpolate_2035= True)
 
             # cleaning the nodes dataframe
 
@@ -122,15 +125,11 @@ class model_data:
             self.ac_lines = lines
             #self.dc_lines = lines_DC
             #plotly_empty_map(nodes=self.nodes, ac_lines=self.ac_lines, dc_lines=pd.DataFrame(), folder=run_parameter.import_folder)
-            self.ATC_capacities = self.interzonal_lines(lines=self.ac_lines)
 
-            # load TYNDP values
-            self.tyndp_values(run_parameter=run_parameter)
+            self.calculate_interzonal_capacities(lines=self.ac_lines)
 
             # new demand
             #self.demand = demand_columns(self.nodes, load_raw, self.tyndp_load)
-
-            load_entsoe_ts.columns = load_entsoe_ts.columns.str.replace("_", "")
             self.scaling_demand(load_entsoe_ts = load_entsoe_ts, years = run_parameter.years)
 
             # get new renewables
@@ -253,14 +252,17 @@ class model_data:
             self.extend_overloaded_lines(type="AC", case_name = run_parameter.case_name)
             self.extend_overloaded_lines(type="DC", case_name = run_parameter.case_name)
 
-    def interzonal_lines(self, lines):
+    def calculate_interzonal_capacities(self, lines):
         merged_lines = lines.merge(self.nodes["bidding_zone"], left_on="from", right_index=True).merge(self.nodes["bidding_zone"], left_on="to", right_index=True)
         filtered_lines = merged_lines.groupby(["bidding_zone_x", "bidding_zone_y"]).sum()[["pmax", "max"]].reset_index()
         single_entries = self.find_duplicate_lines(filtered_lines, ["bidding_zone_x", "bidding_zone_y"], False)
         filtered = single_entries.query('bidding_zone_x != bidding_zone_y')
-        return filtered
-    def find_duplicate_lines(self, lines, columns=["from", "to"], fix_reactance=True):
+        self.ATC_capacities = filtered
+        return
+    def find_duplicate_lines(self, lines, columns=None, fix_reactance=True):
         #get rid of multiple lines in the same columns
+        if columns is None:
+            columns = ["from", "to"]
         grouped_lines = lines.groupby(columns).size()
         grouped_lines = grouped_lines[grouped_lines>1]
         for index, count in grouped_lines.items():
@@ -504,7 +506,7 @@ class model_data:
         dispatchable_generators = {year:get_conventional_yearly(tyndp_values=tyndp_installed_capacity, df_2020_capacity_bz = conventional_fossil, df_2020_capacity_bz_grouped = conventional_fossil_grouped, conventional_h20= conventional_h20, year = year, CO2_price = self.CO2_price) for year in run_parameter.years}
         return dispatchable_generators
 
-    def tyndp_values(self, run_parameter, filename_capacity = "Updated_Electricity_Modelling_Results.xlsx", filename_demand ="Updated_Electricity_Modelling_Results.xlsx", scenario = "Global Ambition"):
+    def import_tyndp_values(self, run_parameter,  interpolate_2035, filename_capacity = "Updated_Electricity_Modelling_Results.xlsx", filename_demand ="Updated_Electricity_Modelling_Results.xlsx", scenario = "Global Ambition"):
         df_installed_capacity = pd.read_excel(run_parameter.data_folder+ "/TYNDP/"+filename_capacity, sheet_name="Capacity & Dispatch")
         df_demand = pd.read_excel(run_parameter.data_folder+ "/TYNDP/"+filename_demand, sheet_name="Demand")
         ## Supply
@@ -523,7 +525,8 @@ class model_data:
         tyndp_installed_capacity = tyndp_installed_capacity.groupby(["Node", "Year", "Fuel"]).sum(numeric_only = False)["Value"].reset_index(["Year"])
         tyndp_installed_capacity = tyndp_installed_capacity.pivot(columns ="Year", values ="Value")
 
-        tyndp_installed_capacity[2035] = (tyndp_installed_capacity[2030] + tyndp_installed_capacity[2040]) / 2
+        if interpolate_2035:
+            tyndp_installed_capacity[2035] = (tyndp_installed_capacity[2030] + tyndp_installed_capacity[2040]) / 2
         self.tyndp_installed_capacity=tyndp_installed_capacity
 
         ##Demand
@@ -538,7 +541,8 @@ class model_data:
         tyndp_demand= df_demand.query('Node in @run_parameter.bidding_zone_selection and Scenario == @scenario and `Climate Year` == "CY 2009" and Special == False')
         tyndp_demand = tyndp_demand.groupby(["Node", "Year"]).sum(numeric_only = False)["Value"].reset_index(["Year"])
         tyndp_demand = tyndp_demand.pivot(columns="Year", values="Value")
-        tyndp_demand[2035] = (tyndp_demand[2030] + tyndp_demand[2040])/2
+        if interpolate_2035:
+            tyndp_demand[2035] = (tyndp_demand[2030] + tyndp_demand[2040])/2
         self.tyndp_demand = tyndp_demand
 
     def reduce_timeseries(self, long_ts, u_index):
