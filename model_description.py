@@ -24,38 +24,6 @@ run_parameter.create_scenarios()
 
 data = model_data(create_res=True, reduced_ts=False, export_files=True, run_parameter=run_parameter)
 
-# def ptdf(bus_raw, lines, slack = 0):
-#     b_matrix= np.diag(1/lines["x"])
-#     b_df = pd.DataFrame(b_matrix, columns = lines.index, index = lines.index)# dimensions: LxL Lines and lines
-#     a_matrix = pd.DataFrame(np.zeros((len(bus_raw.index), (len(lines.index))), dtype=int), columns=lines.index,index=bus_raw.index)  # dimensions: LxJ with nodes as index and lines as columns
-#     for i in lines.index:
-#         a_matrix[i][lines[lines.index == i]["from"]] = 1
-#         a_matrix[i][lines[lines.index == i]["to"]] = -1
-#     incidence_df = a_matrix.transpose()
-#     incidence_matrix = incidence_df.to_numpy()
-#     def create_B(lines, bus_raw):
-#         fbus = lines["from"]
-#         tbus = lines["to"]
-#         lines_x = lines["x"]
-#         ybus = pd.DataFrame(np.zeros((len(bus_raw), (len(bus_raw)))), columns=bus_raw.index,index=bus_raw.index)             #dimensions nodes*nodes
-#         for i in lines.index:
-#             ybus[fbus[i]][tbus[i]] = -1/lines_x[i]
-#             ybus[tbus[i]][fbus[i]] = -1/lines_x[i]
-#         rowsum_ybus = np.sum(ybus, axis=1)
-#         for i in ybus.index:
-#             ybus[i][i] = - rowsum_ybus[i]
-#         return pd.DataFrame(ybus)
-#
-#     B = create_B(lines, bus_raw)# dimensions: JxJ nodes*nodes
-#
-#     B.loc[:,slack] = 0.0
-#     B.loc[slack,:] = 0.0
-#     B_inv = pd.DataFrame(np.linalg.pinv(B.values), B.index, B.index) #Dimension: bxb
-#     ptdf_test = b_vector@incidence_matrix
-#     ptdf_as_described =
-
-#    return incidence_matrix, B
-#ptdf(data.nodes, data.ac_lines)
 
 def nodal_markets(data = data, run_parameter = run_parameter):
 
@@ -124,8 +92,8 @@ def nodal_markets(data = data, run_parameter = run_parameter):
     # objective function
     model.setObjective(
         gp.quicksum(
-        gp.quicksum(data.dispatchable_generators[y]["mc"][g] * P_G[y, t, g] for g in G)
-        - c_d * gp.quicksum(P_D[y, t, n] for n in N)
+            gp.quicksum(data.dispatchable_generators[y]["mc"][g] * P_G[y, t, g] for g in G)
+            - c_d * gp.quicksum(P_D[y, t, n] for n in N)
         for t in T for y in Y), GRB.MINIMIZE)
 
     #upper capacity limits
@@ -176,6 +144,7 @@ def zonal_markets(data=data, run_parameter=run_parameter):
     R = data.res_series[run_parameter.years[0]].columns
     DAM = data.reservoir.index
     S = data.storage.index
+    A = data.ATC_capacities.index
     L = data.ac_lines.index
     # LDC = data.dc_lines.index
     C = range(len(L) - len(N) + 1)  # C_cl_df.index
@@ -186,7 +155,7 @@ def zonal_markets(data=data, run_parameter=run_parameter):
     ####################################
 
     storage_efficiency = 0.8
-    price_LL = 3000
+    c_d = 3000
     storage_penalty = 0.001
 
     if run_parameter.reduced_TS:
@@ -194,116 +163,58 @@ def zonal_markets(data=data, run_parameter=run_parameter):
     else:
         full_ts = 8760
     delta = 8760 / full_ts
+    demand_dict = {year: data.demand[year].to_dict() for year in run_parameter.years}
 
-    k = line_bus_matrix(data.ac_lines, data.nodes)
-    C_cl = cycles(data.ac_lines)
-    C_cl_numpy = pd.DataFrame(C_cl).to_numpy()
-    k_dict = pd.DataFrame(k).to_dict()
-    x_numpy = pd.Series(data.ac_lines["x"]).to_numpy()
-    C_cl_x_multi = np.multiply(C_cl_numpy, x_numpy)
-    C_cl_x_multi_dict = pd.DataFrame(C_cl_x_multi).to_dict()
 
     # here I do some dictionary reordering.
     encyc_nodes_in_zones = create_encyclopedia(data.nodes["bidding_zone"])
     encyc_powerplants_in_zone = create_encyclopedia(data.dispatchable_generators[run_parameter.years[0]]["bidding_zone"])
-    encyc_storage_in_zone = create_encyclopedia(data.storage["bidding_zone"])
-    encyc_dam_in_zones = create_encyclopedia(data.reservoir["bidding_zone"])
-    encyc_res_in_zones = create_encyclopedia(
-        data.res_series[run_parameter.years[0]].T.merge(data.nodes["bidding_zone"], left_index=True, right_index=True)[
-            "bidding_zone"])
-    encyc_ror_in_zones = create_encyclopedia(
-        data.ror_series.T.merge(data.nodes["bidding_zone"], left_index=True, right_index=True)["bidding_zone"])
-
-    encyc_powerplants_in_node = create_encyclopedia(data.dispatchable_generators[run_parameter.years[0]]["node"])
-    encyc_storage_bus = create_encyclopedia(data.storage["node"])
-    # encyc_DC_from = create_encyclopedia(data.dc_lines["from"])
-    # encyc_DC_to = create_encyclopedia(data.dc_lines["to"])
-    # encyc_dam = create_encyclopedia(data.reservoir["node"])
-    # encyc_dam_zones = create_encyclopedia(data.reservoir["bidding_zone"])
-
-    res_series_busses = {k: False for k in data.res_series[run_parameter.years[0]].columns.to_list()}
-    ror_supply_busses = {k: False for k in data.ror_series.columns.to_list()}
-
-    ror_supply_dict = data.ror_series.to_dict()
-    # demand_col_list = data.demand.columns.to_list()
-    demand_dict = {year: data.demand[year].to_dict() for year in run_parameter.years}
-
-    print("Preparations done. The time difference is :",
-          timeit.default_timer() - starttime)
+    #encyc_DC_from = create_encyclopedia(data.dc_lines["from_bidding_zone"])
+    #encyc_DC_to = create_encyclopedia(data.dc_lines["to_bidding_zone"])
+    encyc_ATC_from = create_encyclopedia(data.ATC_capacities["from_bidding_zone"])
+    encyc_ATC_to = create_encyclopedia(data.ATC_capacities["to_bidding_zone"])
+    encyc_res_in_zones = create_encyclopedia(data.res_series[run_parameter.years[0]].T.merge(data.nodes["bidding_zone"], left_index=True, right_index=True)["bidding_zone"])
+    print("Preparations done. The time difference is :",timeit.default_timer() - starttime)
 
     # Variables
     print("before Variables are made. The time difference is :", timeit.default_timer() - starttime)
 
-    P_C = model.addVars(Y, T, G, lb=0.0, ub=GRB.INFINITY, name="P_C")
+    P_G = model.addVars(Y, T, G, lb=0.0, ub=GRB.INFINITY, name="P_G")
     P_R = model.addVars(Y, T, R, lb=0.0, ub=GRB.INFINITY, name="P_R")
-    P_DAM = model.addVars(Y, T, DAM, lb=0.0, ub=GRB.INFINITY, name="P_DAM")
+    #P_DAM = model.addVars(Y, T, DAM, lb=0.0, ub=GRB.INFINITY, name="P_DAM")
     res_curtailment = model.addVars(Y, T, R, lb=0.0, ub=GRB.INFINITY, name="res_curtailment")
-    # cap_BH = model.addVars(Y, I, lb=0.0, ub = GRB.INFINITY, name = "cap_BH")
-    F_AC = model.addVars(Y, T, L, lb=-GRB.INFINITY, ub=GRB.INFINITY, name="F_AC")
-    # F_DC = model.addVars(Y, T, LDC, lb =-GRB.INFINITY,ub=GRB.INFINITY, name = "F_DC")
-    # ATC = model.addVars(Y, T, LDC, lb =-GRB.INFINITY,ub=GRB.INFINITY, name = "ATC")
-    p_load_lost = model.addVars(Y, T, N, lb=0.0, ub=GRB.INFINITY, name="p_load_lost")
-    # storage variables
-    P_S = model.addVars(Y, T, S, lb=0.0, ub=GRB.INFINITY, vtype=GRB.CONTINUOUS,
-                        name="P_S")  # power gen. by storage (depletion)
-    C_S = model.addVars(Y, T, S, lb=0.0, ub=GRB.INFINITY, vtype=GRB.CONTINUOUS,
-                        name="C_S")  # demand from storage (filling)
-    L_S = model.addVars(Y, T, S, lb=0.0, ub=GRB.INFINITY, vtype=GRB.CONTINUOUS, name="L_S")  # storage level
+    #F_AC = model.addVars(Y, T, L, lb=-GRB.INFINITY, ub=GRB.INFINITY, name="F_AC")
+    ATC = model.addVars(Y, T, A, lb =-GRB.INFINITY,ub=GRB.INFINITY, name = "ATC")
+    P_D = model.addVars(Y, T, N, lb=0.0, ub=GRB.INFINITY, name="P_D")
     print("Variables made. The time difference is :", timeit.default_timer() - starttime)
 
     # objective function
     # Set objective
     model.setObjective(
-        gp.quicksum(
-            delta * gp.quicksum(
-                data.dispatchable_generators[y]["mc"][g] * P_C[y, t, g] for g in encyc_powerplants_in_zone[z] for t in
-                T)
-            + delta * price_LL * gp.quicksum(p_load_lost[y, t, n] for n in encyc_nodes_in_zones[z] for t in T)
-            + delta * storage_penalty * gp.quicksum(P_S[y, t, s] for s in encyc_storage_in_zone[z] for t in T)
-            # penalty for storage discharge
-            for y in Y for z in Z), GRB.MINIMIZE)
+            gp.quicksum(
+                gp.quicksum(data.dispatchable_generators[y]["mc"][g] * P_G[y, t, g] for g in G)
+                - c_d * gp.quicksum(P_D[y, t, n] for n in N)
+            for y in Y for t in T), GRB.MINIMIZE)
 
-    model.addConstrs((P_C[y, t, g] <= data.dispatchable_generators[y]["P_inst"][g] for g in G for t in T for y in Y),
-                     name="GenerationLimitUp")
-    model.addConstrs((P_DAM[y, t, g] <= data.reservoir["P_inst"][g] for g in DAM for t in T for y in Y),
-                     name="DAMLimitUp")
-    model.addConstrs(
-        (gp.quicksum(P_DAM[y, t, dam] for dam in encyc_dam_in_zones[z] for t in T) <= data.reservoir_zonal_limit[z] for
-         z in Z for y in Y), name="DAMSumUp")
-
-    model.addConstrs((P_R[y, t, r] <= data.res_series[y][r][t] for r in R for t in T for y in Y),
-                     name="ResGenerationLimitUp")
-    model.addConstrs(
-        (res_curtailment[y, t, r] == data.res_series[y][r][t] - P_R[y, t, r] for r in R for t in T for y in Y),
-        name="Curtailment")
-    model.addConstrs((p_load_lost[y, t, n] <= demand_helper2(n, t, y, demand_dict) for n in N for t in T for y in Y),name="limitLoadLoss")
-    model.addConstrs((P_S[y, t, s] <= data.storage["P_inst"][s] for s in S for t in T for y in Y), name="StoragePowerOutput")
-    model.addConstrs((C_S[y, t, s] <= data.storage["P_inst"][s] for s in S for t in T for y in Y),name="StoragePowerInput")
-    model.addConstrs((P_S[y, t, s] <= L_S[y, t, s] for s in S for t in T for y in Y), name="StorageLevelGen")
-    model.addConstrs((L_S[y, t, s] <= data.storage["capacity"][s] for s in S for t in T for y in Y),
-                     name="StorageLevelCap")
-
-    # storage
-    model.addConstrs((L_S[y, t, s] == 0.5 * data.storage["capacity"][s] - P_S[y, t, s] + storage_efficiency * C_S[y, t, s] for s in S for t in [0] for y in Y), name="Storage_balance_init")
-    model.addConstrs(
-        (L_S[y, t, s] == L_S[y, t - 1, s] - P_S[y, t, s] + storage_efficiency * C_S[y, t, s] for s in S for t in T_extra
-         for y in Y), name="Storage_balance")
-    model.addConstrs((L_S[y, T[-1], s] == 0.5 * data.storage["capacity"][s] for s in S for y in Y), name="Storage_end_level")
+    model.addConstrs((P_G[y, t, g] <= data.dispatchable_generators[y]["P_inst"][g] for g in G for t in T for y in Y),name="GenerationLimitUp")
+    model.addConstrs((P_R[y, t, r] <= data.res_series[y][r][t] for r in R for t in T for y in Y),name="ResGenerationLimitUp")
+    model.addConstrs((res_curtailment[y, t, r] == data.res_series[y][r][t] - P_R[y, t, r] for r in R for t in T for y in Y), name="Curtailment")
+    model.addConstrs((P_D[y, t, n] <= demand_helper2(n, t, y, demand_dict) for n in N for t in T for y in Y),name="DemandUpperLimit")
+    model.addConstrs((ATC[y, t, a] <= data.ATC_capacities["max"][a] for a in A for t in T for y in Y),name="LinePowerFlowMax")
+    model.addConstrs((ATC[y, t, a] >= -data.ATC_capacities["max"][a] for a in A for t in T for y in Y),name="LinePowerFlowMmin")
 
     model.addConstrs((
-        gp.quicksum(P_C[y, t, g] for g in encyc_powerplants_in_zone[z])
+        gp.quicksum(P_G[y, t, g] for g in encyc_powerplants_in_zone[z])
+        - gp.quicksum(P_D[y, t, n] for n in encyc_nodes_in_zones[z])
         + gp.quicksum(P_R[y, t, r] for r in encyc_res_in_zones[z])
-        + gp.quicksum(P_DAM[y, t, dam] for dam in encyc_dam_in_zones[z])
-        + gp.quicksum(ror_supply_dict[r][t] for r in encyc_ror_in_zones[z])
-        + gp.quicksum(P_S[y, t, s] - C_S[y, t, s] for s in encyc_storage_in_zone[z])
-        == gp.quicksum(demand_dict[y][n][t] - p_load_lost[y, t, n] for n in encyc_nodes_in_zones[z])
+        #+ gp.quicksum(F_DC[y, t, d] for d in encyc_DC_from[z])
+        #- gp.quicksum(F_DC[y, t, d] for d in encyc_DC_to[z])
+        + gp.quicksum(ATC[y, t, d] for d in encyc_ATC_from[z])
+        - gp.quicksum(ATC[y, t, d] for d in encyc_ATC_to[z])
+        == 0
         for z in Z for t in T for y in Y), name="Injection_equality")
 
-    # 70% of the physical capacity
-    # take the prices and the nodal quantities and calculate
-    # with ptdf -> calculate and not resolve it!
-    # but with ptdfs you need to fix the DC net injections beforehand
-    # PROBLEM: If the first stage solutaion is not restricted, the second stage - if an optimisation problem- finds more profitable trades -> not only redispatch to make it feasible
+    # Todo PROBLEM: If the first stage solutaion is not restricted, the second stage - if an optimisation problem- finds more profitable trades -> not only redispatch to make it feasible
     try:
         model.write(run_parameter.export_model_formulation)
         print("The time difference after model writing:", timeit.default_timer() - starttime)
@@ -312,12 +223,19 @@ def zonal_markets(data=data, run_parameter=run_parameter):
         pass
     return model
 
-model = nodal_markets(data=data, run_parameter=run_parameter)
-model.optimize()
-model.printStats()
-#model.computeIIS()
-#model.write("model.ilp")
+#model = nodal_markets(data=data, run_parameter=run_parameter)
+
 model2 = zonal_markets(data=data, run_parameter=run_parameter)
+model2.optimize()
+
+def zonal_redispatch(data, run_parameter):
+    #todo
+    #Calculate the sum of the violations on the lines as the "flexibility needs" -> absolute deviations
+    #P_D, P_G, P_R, F_DC -> fixed
+    #multiply P_INC with ptdfs to calculate the line flows
+    return
+#model2.computeIIS()
+#model2.write("model.ilp")
 
 test3 = {}
 for y in Y:

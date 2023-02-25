@@ -108,13 +108,13 @@ class model_data:
             conventionals = conventionals_filtered.reset_index(drop=True)
             conventionals["node"] = conventionals["node"].astype(int)
 
-            lines_matched = lines_raw.merge(self.nodes.reset_index()[["index", "bus_id"]], how="left", left_on="bus_from",right_on="bus_id")
-            lines_matched = lines_matched.merge(self.nodes.reset_index()[["index", "bus_id"]], how="left", left_on="bus_to",right_on="bus_id")
+            lines_matched = lines_raw.merge(self.nodes.reset_index()[["index", "bus_id","bidding_zone"]], how="left", left_on="bus_from",right_on="bus_id")
+            lines_matched = lines_matched.merge(self.nodes.reset_index()[["index", "bus_id", "bidding_zone"]], how="left", left_on="bus_to",right_on="bus_id")
             lines_filtered = lines_matched[lines_matched['index_x'].notnull()]
             lines_filtered = lines_filtered[lines_filtered['index_y'].notnull()]
 
-            lines = lines_filtered[["rate_b", "x", "index_x", "index_y"]].reset_index(drop=True)
-            lines.columns = ["pmax", "x", "from", "to"]
+            lines = lines_filtered[["rate_b", "x", "index_x", "index_y", "bidding_zone_x", "bidding_zone_y"]].reset_index(drop=True)
+            lines.columns = ["pmax", "x", "from", "to", "from_bidding_zone", "to_bidding_zone"]
             lines = lines[lines["pmax"]>0.1]
             lines["from"] = lines["from"].astype(int)
             lines["to"] = lines["to"].astype(int)
@@ -253,10 +253,9 @@ class model_data:
             self.extend_overloaded_lines(type="DC", case_name = run_parameter.case_name)
 
     def calculate_interzonal_capacities(self, lines):
-        merged_lines = lines.merge(self.nodes["bidding_zone"], left_on="from", right_index=True).merge(self.nodes["bidding_zone"], left_on="to", right_index=True)
-        filtered_lines = merged_lines.groupby(["bidding_zone_x", "bidding_zone_y"]).sum()[["pmax", "max"]].reset_index()
-        single_entries = self.find_duplicate_lines(filtered_lines, ["bidding_zone_x", "bidding_zone_y"], False)
-        filtered = single_entries.query('bidding_zone_x != bidding_zone_y')
+        filtered_lines = lines.groupby(["from_bidding_zone", "to_bidding_zone"]).sum()[["pmax", "max"]].reset_index()
+        single_entries = self.find_duplicate_lines(filtered_lines, ["from_bidding_zone", "to_bidding_zone"], False)
+        filtered = single_entries.query('from_bidding_zone != to_bidding_zone')
         self.ATC_capacities = filtered
         return
     def find_duplicate_lines(self, lines, columns=None, fix_reactance=True):
